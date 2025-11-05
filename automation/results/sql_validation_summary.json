@@ -1,0 +1,88 @@
+{
+    "timestamp": "2025-11-04T12:01:13+00:00",
+    "database": {
+        "host": "oracle-db",
+        "database": "b2b_db",
+        "user": "b2b_user"
+    },
+    "validation_summary": {
+        "total_validations": 12,
+        "passed_validations": 0,
+        "failed_validations": 12,
+        "success_rate": 0,
+        "status": "FAILED"
+    },
+    "validation_results": [
+        {
+            "validation_name": "Customer Data Volume",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Transaction Data Volume",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Audit Data Volume",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Transaction-Customer Integrity",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Audit-Transaction Integrity",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Audit-Customer Integrity",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "No Negative Customer Balances",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Transaction Amount Validation",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Audit Balance Consistency",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Complex Join Performance",
+            "status": "FAILED",
+            "details": "Query execution failed"
+        }
+,
+        {
+            "validation_name": "Recent Transaction Audit Completeness",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+,
+        {
+            "validation_name": "Transaction Status Consistency",
+            "status": "FAILED",
+            "details": "SQL execution error: psql: error: connection to server at "oracle-db" (172.20.0.2), port 1521 failed: Connection refused"
+        }
+    ]
+}

@@ -1,0 +1,321 @@
+pipeline {
+    agent any
+    
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'production'],
+            description: 'Target environment for deployment'
+        )
+        booleanParam(
+            name: 'SKIP_PERFORMANCE_TESTS',
+            defaultValue: false,
+            description: 'Skip performance testing stage'
+        )
+        string(
+            name: 'P90_THRESHOLD',
+            defaultValue: '250',
+            description: 'P90 response time threshold in milliseconds'
+        )
+    }
+    
+    environment {
+        DOCKER_REGISTRY = 'localhost:5000'
+        APP_NAME = 'b2b-transaction-api'
+        VERSION = "${BUILD_NUMBER}"
+        COMPOSE_PROJECT_NAME = 'qualitygatepoc'
+    }
+    
+    stages {
+        stage('Checkout & Setup') {
+            steps {
+                script {
+                    echo "🚀 Starting B2B QA Pipeline - Build #${BUILD_NUMBER}"
+                    echo "Environment: ${params.ENVIRONMENT}"
+                    echo "P90 Threshold: ${params.P90_THRESHOLD}ms"
+                }
+                
+                // Clean workspace
+                cleanWs()
+                
+                // Checkout code
+                checkout scm
+                
+                // Setup environment
+                sh '''
+                    echo "Setting up build environment..."
+                    mkdir -p logs performance/results automation/results
+                    chmod +x automation/*.sh performance/*.sh
+                '''
+            }
+        }
+        
+        stage('Build & Deploy') {
+            parallel {
+                stage('Build Application') {
+                    steps {
+                        script {
+                            echo "🏗️ Building application containers..."
+                        }
+                        sh '''
+                            cd app
+                            docker build -t ${DOCKER_REGISTRY}/${APP_NAME}:${VERSION} .
+                            docker tag ${DOCKER_REGISTRY}/${APP_NAME}:${VERSION} ${DOCKER_REGISTRY}/${APP_NAME}:latest
+                        '''
+                    }
+                }
+                
+                stage('Database Setup') {
+                    steps {
+                        script {
+                            echo "🗄️ Preparing database environment..."
+                        }
+                        sh '''
+                            echo "Database initialization scripts prepared"
+                            ls -la database/init/
+                        '''
+                    }
+                }
+            }
+        }
+        
+        stage('Environment Deployment') {
+            steps {
+                script {
+                    echo "🚀 Deploying to ${params.ENVIRONMENT} environment..."
+                }
+                sh '''
+                    # Deploy using Docker Compose
+                    docker-compose down --remove-orphans || true
+                    docker-compose up -d --build
+                    
+                    # Wait for services to be healthy
+                    echo "Waiting for services to start..."
+                    sleep 30
+                    
+                    # Verify deployment
+                    docker-compose ps
+                '''
+                
+                // Health check
+                sh '''
+                    echo "Performing health checks..."
+                    MAX_ATTEMPTS=10
+                    ATTEMPT=0
+                    
+                    while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+                        if curl -f http://localhost:5000/health; then
+                            echo "✅ Application is healthy"
+                            break
+                        fi
+                        echo "⏳ Waiting for application... (attempt $((ATTEMPT+1))/$MAX_ATTEMPTS)"
+                        sleep 10
+                        ATTEMPT=$((ATTEMPT+1))
+                    done
+                    
+                    if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+                        echo "❌ Application health check failed"
+                        exit 1
+                    fi
+                '''
+            }
+        }
+        
+        stage('Regression Testing (SIT)') {
+            steps {
+                script {
+                    echo "🧪 Running System Integration Tests..."
+                }
+                sh '''
+                    cd automation
+                    ./run_regression_tests.sh
+                '''
+                
+                // Publish test results
+                publishTestResults testResultsPattern: 'automation/results/regression_results.xml'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'automation/results/**', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Performance Testing (PST Agent)') {
+            when {
+                not { params.SKIP_PERFORMANCE_TESTS }
+            }
+            steps {
+                script {
+                    echo "⚡ Running Performance Tests..."
+                    echo "Target: 50 concurrent users, 60 seconds"
+                    echo "Pass Criteria: P90 < ${params.P90_THRESHOLD}ms"
+                }
+                
+                sh '''
+                    cd performance
+                    export P90_THRESHOLD=${P90_THRESHOLD}
+                    ./run_performance_test.sh
+                '''
+            }
+            post {
+                always {
+                    // Archive performance results
+                    archiveArtifacts artifacts: 'performance/results/**', allowEmptyArchive: true
+                    
+                    // Publish performance report
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'performance/results/html_report',
+                        reportFiles: 'index.html',
+                        reportName: 'Performance Test Report'
+                    ])
+                }
+                failure {
+                    script {
+                        echo "❌ Performance tests failed - Running diagnostic analysis..."
+                    }
+                }
+            }
+        }
+        
+        stage('Data Integrity Validation (SQL Agent)') {
+            steps {
+                script {
+                    echo "🔍 Running SQL Agent - Data Integrity Checks..."
+                }
+                sh '''
+                    cd automation
+                    ./run_sql_validation.sh
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'automation/results/sql_validation_*.log', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Log Analysis (BASH Agent)') {
+            steps {
+                script {
+                    echo "📋 Running BASH Agent - Log Parsing & Analysis..."
+                }
+                sh '''
+                    cd automation
+                    ./run_log_analysis.sh
+                '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'automation/results/log_analysis_*.txt', allowEmptyArchive: true
+                }
+            }
+        }
+        
+        stage('Validation & Reporting') {
+            steps {
+                script {
+                    echo "📊 Generating Final Validation Report..."
+                }
+                
+                sh '''
+                    cd automation
+                    ./generate_final_report.sh
+                '''
+                
+                // Parse final results
+                script {
+                    def reportExists = fileExists('automation/results/final_report.json')
+                    if (reportExists) {
+                        def report = readJSON file: 'automation/results/final_report.json'
+                        
+                        echo "=== FINAL QA VALIDATION RESULTS ==="
+                        echo "Regression Tests: ${report.regression_tests?.status ?: 'UNKNOWN'}"
+                        echo "Performance Tests: ${report.performance_tests?.status ?: 'UNKNOWN'}"
+                        echo "SQL Validation: ${report.sql_validation?.status ?: 'UNKNOWN'}"
+                        echo "Log Analysis: ${report.log_analysis?.status ?: 'UNKNOWN'}"
+                        echo "Overall Status: ${report.overall_status ?: 'UNKNOWN'}"
+                        
+                        if (report.overall_status != 'PASSED') {
+                            echo "❌ QA Validation Failed - Check individual stage results"
+                            currentBuild.result = 'FAILURE'
+                        } else {
+                            echo "✅ All QA Validation Stages Passed Successfully"
+                        }
+                    } else {
+                        echo "⚠️ Final report not generated"
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'automation/results/final_report.*', allowEmptyArchive: true
+                    
+                    publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'automation/results',
+                        reportFiles: 'final_report.html',
+                        reportName: 'QA Validation Report'
+                    ])
+                }
+            }
+        }
+    }
+    
+    post {
+        always {
+            script {
+                echo "🏁 Pipeline Execution Complete"
+            }
+            
+            // Cleanup
+            sh '''
+                echo "Performing cleanup..."
+                docker-compose down || true
+            '''
+        }
+        
+        success {
+            script {
+                echo "✅ Pipeline completed successfully!"
+                
+                // Send success notification (if configured)
+                // slackSend channel: '#qa-notifications', 
+                //           message: "✅ B2B QA Pipeline PASSED - Build #${BUILD_NUMBER}"
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Pipeline failed!"
+                
+                // Collect diagnostic information
+                sh '''
+                    echo "Collecting diagnostic information..."
+                    docker-compose logs > logs/docker-compose-failure.log || true
+                    docker ps -a > logs/containers-status.log || true
+                '''
+                
+                // Archive failure logs
+                archiveArtifacts artifacts: 'logs/**', allowEmptyArchive: true
+                
+                // Send failure notification (if configured)
+                // slackSend channel: '#qa-notifications', 
+                //           color: 'danger',
+                //           message: "❌ B2B QA Pipeline FAILED - Build #${BUILD_NUMBER}"
+            }
+        }
+        
+        unstable {
+            script {
+                echo "⚠️ Pipeline completed with warnings"
+            }
+        }
+    }
+}

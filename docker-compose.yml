@@ -1,0 +1,214 @@
+services:
+  # B2B Transaction API Application
+  app:
+    build: 
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: qualitygatepoc-app-1
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=oracle-db
+      - DB_PORT=5432
+      - DB_NAME=b2b_db
+      - DB_USER=b2b_user
+      - DB_PASSWORD=b2b_password
+    volumes:
+      - ./logs:/opt/app/logs
+      - app_logs:/opt/app/logs
+    depends_on:
+      - oracle-db
+    networks:
+      - b2b-network
+    # Resource constraints as specified (2 CPU, 4GB RAM)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database (Simplified for Demo)
+  oracle-db:
+    image: postgres:13
+    container_name: qualitygatepoc-oracle-db-1
+    environment:
+      - POSTGRES_DB=b2b_db
+      - POSTGRES_USER=b2b_user
+      - POSTGRES_PASSWORD=b2b_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - b2b-network
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U b2b_user -d b2b_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # JMeter Performance Testing Container
+  jmeter:
+    image: justb4/jmeter:5.4.1
+    container_name: qualitygatepoc-jmeter-1
+    volumes:
+      - ./performance:/opt/performance
+      - ./performance/results:/opt/performance/results
+    environment:
+      - JMETER_HOME=/opt/apache-jmeter-5.4.1
+      - BASE_URL=http://app:5000
+      - THREADS=50
+      - DURATION=60
+      - P90_THRESHOLD=250
+    networks:
+      - b2b-network
+    depends_on:
+      - app
+    profiles:
+      - performance
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Jenkins CI/CD Server
+  jenkins:
+    image: jenkins/jenkins:lts
+    container_name: qualitygatepoc-jenkins-1
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    environment:
+      - JENKINS_OPTS="--httpPort=8080"
+      - JAVA_OPTS="-Djenkins.install.runSetupWizard=false"
+    volumes:
+      - jenkins_home:/var/jenkins_home
+      - ./cicd:/var/jenkins_home/workspace/b2b-qa-pipeline
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - b2b-network
+    profiles:
+      - cicd
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 3G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+
+  # Automation Agent Container
+  automation-agent:
+    image: python:3.9-slim
+    container_name: qualitygatepoc-automation-1
+    working_dir: /opt/automation
+    volumes:
+      - ./automation:/opt/automation
+      - ./logs:/opt/app/logs:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_URL=http://app:5000
+      - DB_HOST=oracle-db
+      - DB_PORT=5432
+      - DB_NAME=b2b_db
+      - DB_USER=b2b_user
+      - DB_PASSWORD=b2b_password
+    command: sleep infinity
+    networks:
+      - b2b-network
+    depends_on:
+      - app
+      - oracle-db
+    profiles:
+      - automation
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 512M
+
+  # Monitoring and Observability
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: qualitygatepoc-prometheus-1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    networks:
+      - b2b-network
+    profiles:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 1G
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: qualitygatepoc-grafana-1
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana:/etc/grafana/provisioning
+    networks:
+      - b2b-network
+    profiles:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+volumes:
+  postgres_data:
+    driver: local
+  jenkins_home:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  b2b-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

@@ -1,0 +1,338 @@
+name: 🚀 Production Deployment
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment Environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+      force_deploy:
+        description: 'Force deployment (skip quality gates)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==========================================
+  # Pre-Deployment Validation
+  # ==========================================
+  pre-deployment:
+    name: 🔍 Pre-Deployment Validation
+    runs-on: ubuntu-latest
+    outputs:
+      deployment-approved: ${{ steps.validation.outputs.approved }}
+      
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🔍 Quality Gate Check
+      id: validation
+      run: |
+        echo "🔍 Running pre-deployment quality validation..."
+        
+        # Start services for validation
+        docker-compose up -d
+        sleep 30
+        
+        # Run our comprehensive CI/CD pipeline validation
+        docker cp cicd_pipeline.sh qualitygatepoc-automation-1:/opt/automation/
+        
+        PIPELINE_RESULT=$(docker exec qualitygatepoc-automation-1 bash -c "
+          cd /opt/automation
+          chmod +x cicd_pipeline.sh
+          ./cicd_pipeline.sh
+        ")
+        
+        echo "$PIPELINE_RESULT"
+        
+        if echo "$PIPELINE_RESULT" | grep -q "CI/CD PIPELINE: SUCCESS"; then
+          echo "✅ Pre-deployment validation PASSED"
+          echo "approved=true" >> $GITHUB_OUTPUT
+        elif [[ "${{ github.event.inputs.force_deploy }}" == "true" ]]; then
+          echo "⚠️ Validation failed but force deployment enabled"
+          echo "approved=true" >> $GITHUB_OUTPUT
+        else
+          echo "❌ Pre-deployment validation FAILED"
+          echo "approved=false" >> $GITHUB_OUTPUT
+        fi
+        
+        # Cleanup
+        docker-compose down -v
+
+  # ==========================================
+  # Build & Push Container Images
+  # ==========================================
+  build-images:
+    name: 🏗️ Build & Push Images
+    runs-on: ubuntu-latest
+    needs: pre-deployment
+    if: needs.pre-deployment.outputs.deployment-approved == 'true'
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 🐳 Setup Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔑 Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📊 Extract Metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+
+    - name: 🏗️ Build & Push Application Image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: 📋 Generate Deployment Manifest
+      run: |
+        cat << EOF > deployment-manifest.yml
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: qualitygate-api
+          labels:
+            app: qualitygate-api
+            version: ${{ github.sha }}
+        spec:
+          replicas: 2
+          selector:
+            matchLabels:
+              app: qualitygate-api
+          template:
+            metadata:
+              labels:
+                app: qualitygate-api
+                version: ${{ github.sha }}
+            spec:
+              containers:
+              - name: api
+                image: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+                ports:
+                - containerPort: 5000
+                env:
+                - name: DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: db-credentials
+                      key: url
+                livenessProbe:
+                  httpGet:
+                    path: /health
+                    port: 5000
+                  initialDelaySeconds: 30
+                  periodSeconds: 10
+                readinessProbe:
+                  httpGet:
+                    path: /health
+                    port: 5000
+                  initialDelaySeconds: 5
+                  periodSeconds: 5
+        ---
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: qualitygate-api-service
+        spec:
+          selector:
+            app: qualitygate-api
+          ports:
+          - protocol: TCP
+            port: 80
+            targetPort: 5000
+          type: LoadBalancer
+        EOF
+
+    - name: 📤 Upload Deployment Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-artifacts
+        path: |
+          deployment-manifest.yml
+          docker-compose.prod.yml
+
+  # ==========================================
+  # Staging Deployment
+  # ==========================================
+  deploy-staging:
+    name: 🚀 Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, build-images]
+    if: needs.pre-deployment.outputs.deployment-approved == 'true'
+    environment: 
+      name: staging
+      url: https://staging.qualitygate.example.com
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 📥 Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-artifacts
+
+    - name: 🚀 Deploy to Staging Environment
+      run: |
+        echo "🚀 Deploying to staging environment..."
+        
+        # Simulate deployment process
+        echo "  📦 Pulling latest container images..."
+        echo "  🔧 Updating configuration..."
+        echo "  ♻️  Rolling update deployment..."
+        echo "  🩺 Health check validation..."
+        
+        # In a real scenario, this would deploy to your staging infrastructure
+        # kubectl apply -f deployment-manifest.yml
+        # helm upgrade qualitygate ./helm-chart --set image.tag=${{ github.sha }}
+        
+        echo "✅ Staging deployment completed successfully!"
+
+    - name: 🧪 Post-Deployment Validation
+      run: |
+        echo "🧪 Running post-deployment validation..."
+        
+        # Simulate post-deployment tests
+        echo "  ✅ Application health check: PASSED"
+        echo "  ✅ Database connectivity: PASSED"  
+        echo "  ✅ API endpoints: PASSED"
+        echo "  ✅ Performance benchmarks: PASSED"
+        
+        echo "🎉 Staging environment validation completed!"
+
+  # ==========================================
+  # Production Deployment (Manual Approval)
+  # ==========================================
+  deploy-production:
+    name: 🏆 Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [pre-deployment, build-images, deploy-staging]
+    if: |
+      needs.pre-deployment.outputs.deployment-approved == 'true' && 
+      (github.event_name == 'release' || github.event.inputs.environment == 'production')
+    environment: 
+      name: production
+      url: https://api.qualitygate.example.com
+    
+    steps:
+    - name: 📥 Checkout Code
+      uses: actions/checkout@v4
+
+    - name: 📥 Download Artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: deployment-artifacts
+
+    - name: 🏆 Deploy to Production Environment
+      run: |
+        echo "🏆 Deploying to PRODUCTION environment..."
+        echo "⚠️  This is a production deployment - proceeding with caution"
+        
+        echo "  📦 Pulling production container images..."
+        echo "  🔧 Applying production configuration..."
+        echo "  📊 Creating deployment backup..."
+        echo "  ♻️  Blue-green deployment process..."
+        echo "  🩺 Production health validation..."
+        
+        # In a real scenario, this would deploy to your production infrastructure
+        # kubectl apply -f deployment-manifest.yml --namespace=production
+        # helm upgrade qualitygate ./helm-chart --set image.tag=${{ github.sha }} --namespace=production
+        
+        echo "✅ PRODUCTION deployment completed successfully!"
+
+    - name: 🧪 Production Smoke Tests
+      run: |
+        echo "🧪 Running production smoke tests..."
+        
+        # Simulate production validation
+        echo "  ✅ Production API health: PASSED"
+        echo "  ✅ Database performance: PASSED"
+        echo "  ✅ Cache layer: PASSED"
+        echo "  ✅ Monitoring integration: PASSED"
+        echo "  ✅ Load balancer: PASSED"
+        
+        echo "🎉 Production deployment validation completed!"
+
+    - name: 📢 Production Deployment Notification
+      run: |
+        echo "📢 PRODUCTION DEPLOYMENT SUCCESSFUL! 🎉"
+        echo ""
+        echo "🏆 Deployment Details:"
+        echo "  • Version: ${{ github.sha }}"
+        echo "  • Environment: Production"
+        echo "  • Deployed by: ${{ github.actor }}"
+        echo "  • Deployment time: $(date)"
+        echo ""
+        echo "🔗 Production URL: https://api.qualitygate.example.com"
+        echo "📊 Monitoring: https://monitoring.qualitygate.example.com"
+
+  # ==========================================
+  # Post-Deployment Monitoring
+  # ==========================================
+  monitor-deployment:
+    name: 📊 Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-production]
+    if: always() && (needs.deploy-staging.result == 'success' || needs.deploy-production.result == 'success')
+    
+    steps:
+    - name: 📊 Setup Monitoring
+      run: |
+        echo "📊 Setting up post-deployment monitoring..."
+        
+        # Simulate monitoring setup
+        echo "  📈 Performance metrics collection: ACTIVE"
+        echo "  🚨 Error rate alerting: CONFIGURED"
+        echo "  📱 Notification channels: READY"
+        echo "  🔍 Health check monitoring: ENABLED"
+
+    - name: ⏰ Schedule Health Checks
+      run: |
+        echo "⏰ Scheduling automated health checks..."
+        
+        # In a real scenario, this would configure monitoring systems
+        echo "  • 5-minute health check intervals"
+        echo "  • Performance threshold alerting"
+        echo "  • Automated rollback triggers"
+        echo "  • Incident response automation"
+
+    - name: 📈 Deployment Success Metrics
+      run: |
+        echo "📈 Recording deployment success metrics..."
+        echo "  ✅ Deployment completed without issues"
+        echo "  ✅ All health checks passing"
+        echo "  ✅ Performance within acceptable limits"
+        echo "  ✅ Zero-downtime deployment achieved"

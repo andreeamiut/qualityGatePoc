@@ -1,0 +1,96 @@
+name: 🔍 PR Validation Pipeline
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [opened, synchronize, reopened]
+
+env:
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  # ==========================================
+  # Fast PR Validation
+  # ==========================================
+  pr-validation:
+    name: 🚀 Pull Request Validation
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout PR Code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🐍 Setup Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+        cache: 'pip'
+
+    - name: 📦 Install Dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: 🔍 Quick Code Quality Check
+      run: |
+        echo "🔍 Running quick code quality validation..."
+        
+        # Check for syntax errors
+        python -m py_compile app/*.py
+        
+        # Basic linting (non-blocking)
+        pip install pylint
+        pylint app/ --exit-zero --score=yes
+
+    - name: 🏗️ Build Test
+      run: |
+        echo "🏗️ Testing Docker build process..."
+        docker-compose build
+
+    - name: 🧪 Fast Integration Test
+      run: |
+        echo "🧪 Running fast integration tests..."
+        
+        # Start services
+        docker-compose up -d
+        sleep 20
+        
+        # Quick health checks
+        timeout 30 bash -c 'until curl -f http://localhost:5000/health; do sleep 2; done'
+        
+        # Basic API test
+        HEALTH_RESPONSE=$(curl -s http://localhost:5000/health)
+        if echo "$HEALTH_RESPONSE" | grep -q "healthy"; then
+          echo "✅ API health check passed"
+        else
+          echo "❌ API health check failed"
+          exit 1
+        fi
+        
+        # Test transaction endpoint
+        TXN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
+          -d '{"customer_id": "CUST_PR_TEST", "amount": 50.00, "transaction_type": "PR_VALIDATION"}' \
+          http://localhost:5000/api/v1/transaction)
+        
+        if echo "$TXN_RESPONSE" | grep -q "SUCCESS\|transaction_id"; then
+          echo "✅ Transaction API test passed"
+        else
+          echo "❌ Transaction API test failed"
+          exit 1
+        fi
+
+    - name: 📊 PR Test Summary
+      run: |
+        echo "📊 Pull Request Validation Summary:"
+        echo "  ✅ Code quality check passed"
+        echo "  ✅ Docker build successful"
+        echo "  ✅ API integration tests passed"
+        echo ""
+        echo "🎉 PR is ready for review!"
+
+    - name: 🧹 Cleanup
+      if: always()
+      run: |
+        docker-compose down -v
+        docker system prune -af

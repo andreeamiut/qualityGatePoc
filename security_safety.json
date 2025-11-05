@@ -1,0 +1,141 @@
+{
+    "report_meta": {
+        "scan_target": "files",
+        "scanned": [
+            "app/requirements.txt"
+        ],
+        "scanned_full_path": [
+            "c:\\Users\\user\\Work\\qualityGatePOC\\app\\requirements.txt"
+        ],
+        "target_languages": [
+            "python"
+        ],
+        "policy_file": null,
+        "policy_file_source": "local",
+        "audit_and_monitor": false,
+        "api_key": false,
+        "account": "",
+        "local_database_path": null,
+        "safety_version": "3.6.2",
+        "timestamp": "2025-11-04 10:34:02",
+        "packages_found": 5,
+        "vulnerabilities_found": 0,
+        "vulnerabilities_ignored": 0,
+        "remediations_recommended": 0,
+        "telemetry": {
+            "safety_options": {
+                "files": {
+                    "--file": 1
+                },
+                "output": {
+                    "--output": 1
+                },
+                "save_json": {
+                    "--save-json": 1
+                }
+            },
+            "safety_version": "3.6.2",
+            "safety_source": "cli",
+            "os_type": "Windows",
+            "os_release": "11",
+            "os_description": "Windows-11-10.0.26200-SP0",
+            "python_version": "3.14.0",
+            "safety_command": "check"
+        },
+        "git": {
+            "error": "not-git-repo"
+        },
+        "project": null,
+        "json_version": "1.1",
+        "remediations_attempted": 0,
+        "remediations_completed": 0,
+        "remediation_mode": "NON_INTERACTIVE"
+    },
+    "scanned_packages": {
+        "flask": {
+            "name": "flask",
+            "version": "2.3.3",
+            "requirements": [
+                {
+                    "raw": "Flask==2.3.3",
+                    "extras": [],
+                    "marker": null,
+                    "name": "Flask",
+                    "specifier": "==2.3.3",
+                    "url": null,
+                    "found": "c:\\Users\\user\\Work\\qualityGatePOC\\app\\requirements.txt"
+                }
+            ]
+        },
+        "psycopg2-binary": {
+            "name": "psycopg2-binary",
+            "version": "2.9.7",
+            "requirements": [
+                {
+                    "raw": "psycopg2-binary==2.9.7",
+                    "extras": [],
+                    "marker": null,
+                    "name": "psycopg2-binary",
+                    "specifier": "==2.9.7",
+                    "url": null,
+                    "found": "c:\\Users\\user\\Work\\qualityGatePOC\\app\\requirements.txt"
+                }
+            ]
+        },
+        "psutil": {
+            "name": "psutil",
+            "version": "5.9.5",
+            "requirements": [
+                {
+                    "raw": "psutil==5.9.5",
+                    "extras": [],
+                    "marker": null,
+                    "name": "psutil",
+                    "specifier": "==5.9.5",
+                    "url": null,
+                    "found": "c:\\Users\\user\\Work\\qualityGatePOC\\app\\requirements.txt"
+                }
+            ]
+        },
+        "psycopg2-pool": {
+            "name": "psycopg2-pool",
+            "version": "1.1",
+            "requirements": [
+                {
+                    "raw": "psycopg2-pool==1.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "psycopg2-pool",
+                    "specifier": "==1.1",
+                    "url": null,
+                    "found": "c:\\Users\\user\\Work\\qualityGatePOC\\app\\requirements.txt"
+                }
+            ]
+        },
+        "redis": {
+            "name": "redis",
+            "version": "5.0.1",
+            "requirements": [
+                {
+                    "raw": "redis==5.0.1",
+                    "extras": [],
+                    "marker": null,
+                    "name": "redis",
+                    "specifier": "==5.0.1",
+                    "url": null,
+                    "found": "c:\\Users\\user\\Work\\qualityGatePOC\\app\\requirements.txt"
+                }
+            ]
+        }
+    },
+    "affected_packages": {},
+    "announcements": [],
+    "vulnerabilities": [],
+    "ignored_vulnerabilities": [],
+    "remediations": {},
+    "remediations_results": {
+        "vulnerabilities_fixed": [],
+        "remediations_applied": {},
+        "remediations_skipped": {}
+    }
+}

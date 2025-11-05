@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="B2B Regression Tests" tests="5" failures="1" time="1762257672">
+    <testcase classname="RegressionTest" name="Health Check" time="1.0"/>
+    <testcase classname="RegressionTest" name="Valid Transaction" time="1.0"/>
+    <testcase classname="RegressionTest" name="Invalid Request Handling" time="1.0"/>
+    <testcase classname="RegressionTest" name="Statistics Endpoint" time="1.0"/>
+    <testcase classname="RegressionTest" name="Concurrent Requests" time="1.0">
+        <failure message="Test Failed" type="AssertionError">Only 0/10 successful</failure>
+    </testcase>
+</testsuite>

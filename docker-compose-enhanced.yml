@@ -1,0 +1,216 @@
+services:
+  # B2B Transaction API Application
+  app:
+    build: 
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: qualitygatepoc-app-1
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=oracle-db
+      - DB_PORT=5432
+      - DB_NAME=b2b_db
+      - DB_USER=b2b_user
+      - DB_PASSWORD=b2b_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./logs:/opt/app/logs
+      - app_logs:/opt/app/logs
+    depends_on:
+      - oracle-db
+      - redis
+    networks:
+      - b2b-network
+    # Resource constraints as specified (2 CPU, 4GB RAM)
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # PostgreSQL Database (Simplified for Demo)
+  oracle-db:
+    image: postgres:13
+    container_name: qualitygatepoc-oracle-db-1
+    environment:
+      - POSTGRES_DB=b2b_db
+      - POSTGRES_USER=b2b_user
+      - POSTGRES_PASSWORD=b2b_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres:/docker-entrypoint-initdb.d
+    networks:
+      - b2b-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U b2b_user -d b2b_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  # Redis Cache for Performance
+  redis:
+    image: redis:7-alpine
+    container_name: qualitygatepoc-redis-1
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - b2b-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # JMeter Performance Testing Container
+  jmeter:
+    image: justb4/jmeter:5.4.1
+    container_name: qualitygatepoc-jmeter-1
+    volumes:
+      - ./performance:/opt/performance
+      - ./performance/results:/opt/performance/results
+    environment:
+      - JMETER_HOME=/opt/apache-jmeter-5.4.1
+    depends_on:
+      - app
+    networks:
+      - b2b-network
+    profiles:
+      - performance
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: qualitygatepoc-prometheus-1
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - b2b-network
+    profiles:
+      - monitoring
+
+  # Grafana Dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: qualitygatepoc-grafana-1
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - b2b-network
+    profiles:
+      - monitoring
+
+  # Load Balancer (HAProxy)
+  loadbalancer:
+    image: haproxy:2.8
+    container_name: qualitygatepoc-haproxy-1
+    ports:
+      - "8080:8080"
+      - "8081:8081"  # Stats page
+    volumes:
+      - ./loadbalancer/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - app
+      - app2
+    networks:
+      - b2b-network
+    profiles:
+      - scaling
+
+  # Second app instance for load balancing
+  app2:
+    build: 
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: qualitygatepoc-app-2
+    ports:
+      - "5001:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=oracle-db
+      - DB_PORT=5432
+      - DB_NAME=b2b_db
+      - DB_USER=b2b_user
+      - DB_PASSWORD=b2b_password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - ./logs:/opt/app/logs
+      - app_logs:/opt/app/logs
+    depends_on:
+      - oracle-db
+      - redis
+    networks:
+      - b2b-network
+    profiles:
+      - scaling
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+  # Autonomous Agent Container (Enhanced)
+  automation:
+    image: python:3.9-slim
+    container_name: qualitygatepoc-automation-1
+    volumes:
+      - ./automation:/opt/automation
+      - ./logs:/opt/logs
+      - ./performance/results:/opt/performance/results
+    working_dir: /opt/automation
+    command: tail -f /dev/null  # Keep container running
+    depends_on:
+      - app
+      - oracle-db
+    networks:
+      - b2b-network
+
+networks:
+  b2b-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+  app_logs:

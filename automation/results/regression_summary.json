@@ -1,0 +1,42 @@
+{
+    "timestamp": "2025-11-04T12:01:12+00:00",
+    "total_tests": 5,
+    "passed_tests": 4,
+    "failed_tests": 1,
+    "success_rate": 80.00,
+    "status": "FAILED",
+    "details": {
+        "app_url": "http://app:5000",
+        "test_results": [
+            {
+                "test_name": "Health Check",
+                "status": "PASSED",
+                "details": "HTTP 200 OK"
+            }
+,
+            {
+                "test_name": "Valid Transaction",
+                "status": "PASSED",
+                "details": "TXN_ID: 39395a58-1400-4b6d-bef0-49f3f17574ad"
+            }
+,
+            {
+                "test_name": "Invalid Request Handling",
+                "status": "PASSED",
+                "details": "HTTP 400 Bad Request"
+            }
+,
+            {
+                "test_name": "Statistics Endpoint",
+                "status": "PASSED",
+                "details": "Valid stats returned"
+            }
+,
+            {
+                "test_name": "Concurrent Requests",
+                "status": "FAILED",
+                "details": "Only 0/10 successful"
+            }
+        ]
+    }
+}
