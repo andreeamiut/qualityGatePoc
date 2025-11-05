@@ -107,6 +107,28 @@ services:
       - app-2
     restart: unless-stopped
 
+  # Automation Agent for CI/CD Testing
+  automation-agent:
+    image: python:3.9-slim
+    container_name: qualitygatepoc-automation-1
+    working_dir: /opt/automation
+    volumes:
+      - ./automation:/opt/automation
+      - ./logs:/opt/app/logs:ro
+    environment:
+      - PYTHONUNBUFFERED=1
+      - APP_URL=http://app:5000
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=b2b_transactions
+      - DB_USER=b2b_user
+      - DB_PASSWORD=secure_b2b_pass
+    command: sleep infinity
+    depends_on:
+      - app
+      - app-2
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   prometheus_data:
