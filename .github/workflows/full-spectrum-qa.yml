@@ -148,16 +148,19 @@ jobs:
         
         # Test transaction creation
         TRANSACTION_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-          -d '{"customer_id": "CUST_00000001", "amount": 100.00, "transaction_type": "TEST"}' \
+          -d '{"customer_id": "CUST_00000001", "amount": 100.00, "transaction_type": "credit"}' \
           http://localhost:5000/api/v1/transaction)
         
         echo "Transaction Response: $TRANSACTION_RESPONSE"
         
-        # Verify transaction was created
-        if echo "$TRANSACTION_RESPONSE" | grep -q "SUCCESS\|transaction_id"; then
+        # Verify transaction was created successfully
+        if echo "$TRANSACTION_RESPONSE" | grep -q '"status":"SUCCESS"'; then
           echo "✅ Transaction test passed"
+        elif echo "$TRANSACTION_RESPONSE" | grep -q '"transaction_id"'; then
+          echo "✅ Transaction test passed (alternative success format)"
         else
           echo "❌ Transaction test failed"
+          echo "Response: $TRANSACTION_RESPONSE"
           exit 1
         fi
 
