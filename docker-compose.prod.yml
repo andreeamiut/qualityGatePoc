@@ -123,7 +123,7 @@ services:
       - DB_NAME=b2b_transactions
       - DB_USER=b2b_user
       - DB_PASSWORD=secure_b2b_pass
-    command: sleep infinity
+    command: bash -c "apt-get update && apt-get install -y curl && sleep infinity"
     depends_on:
       - app
       - app-2

@@ -216,7 +216,7 @@ jobs:
         case "${{ matrix.test-type }}" in
           "integration")
             echo "🔄 Running Integration Tests..."
-            docker exec qualitygatepoc-automation-1 /opt/automation/integration_tests.sh
+            docker exec qualitygatepoc-automation-1 bash /opt/automation/integration_tests.sh
             ;;
           "performance")
             echo "⚡ Running Performance Tests..."
