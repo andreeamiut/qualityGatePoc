@@ -77,7 +77,7 @@ jobs:
     - name: 📊 Dependency Security Check
       run: |
         echo "📊 Checking for known vulnerabilities..."
-        safety check --json --output safety_report.json || true
+        safety check --output json > safety_report.json || true
         safety check || true
 
     - name: 📈 Calculate Quality Score

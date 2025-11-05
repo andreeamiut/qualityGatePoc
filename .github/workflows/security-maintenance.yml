@@ -39,7 +39,7 @@ jobs:
     - name: 🔍 Python Dependency Vulnerability Scan
       run: |
         echo "🔍 Scanning Python dependencies for known vulnerabilities..."
-        safety check --json --output safety_report.json || true
+        safety check --output json > safety_report.json || true
         safety check
 
     - name: 🛡️ Static Security Analysis

@@ -11,19 +11,19 @@ psutil==5.9.5
 # Development and testing dependencies
 pytest==7.4.3
 pytest-cov==4.1.0
-requests==2.31.0
+requests==2.32.4
 
 # Security and code quality tools
-bandit==1.7.5
+bandit==1.7.7
 safety==2.3.4
 
 # Additional testing and automation dependencies
 docker==6.1.3
 pyyaml==6.0.1
-jinja2==3.1.2
+jinja2==3.1.6
 
 # Database utilities
-sqlalchemy==1.4.48
+sqlalchemy==2.0.25
 alembic==1.12.1
 
 # Performance testing
