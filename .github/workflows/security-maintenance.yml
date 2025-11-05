@@ -67,7 +67,7 @@ jobs:
     - name: 🐳 Container Security Scan
       run: |
         echo "🐳 Building image for security scanning..."
-        docker build -t security-scan-image .
+        docker build -t security-scan-image ./app
         
         # Install container security scanner
         curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin
