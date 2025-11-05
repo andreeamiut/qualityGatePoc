@@ -326,8 +326,9 @@ jobs:
         docker exec qualitygatepoc-automation-1 bash -c "
           cd /opt/automation
           echo '🔍 Testing network connectivity...'
-          curl -s http://qualitygatepoc-app-1:5000/health || echo 'Failed to reach app-1'
-          curl -s http://qualitygatepoc-app-2-1:5000/health || echo 'Failed to reach app-2'
+          # Use compose service names inside the automation container network
+          curl -s http://app:5000/health || echo 'Failed to reach app (service: app)'
+          curl -s http://app-2:5000/health || echo 'Failed to reach app-2 (service: app-2)'
           echo '🚀 Starting CI/CD pipeline...'
           chmod +x cicd_pipeline.sh
           ./cicd_pipeline.sh

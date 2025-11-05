@@ -23,12 +23,12 @@ echo "========================================"
 STAGE_START=$(date +%s)
 
 # Check application health with retry logic
-echo "  • Testing app-1 connectivity..."
+echo "  • Testing primary app connectivity (service name: app)..."
 APP1_RESPONSE=""
-for i in {1..3}; do
-    APP1_RESPONSE=$(curl -s --max-time 10 http://qualitygatepoc-app-1:5000/health || echo "connection_failed_attempt_$i")
+for i in {1..6}; do
+    APP1_RESPONSE=$(curl -s --max-time 10 http://app:5000/health || echo "connection_failed_attempt_$i")
     echo "    Attempt $i: $APP1_RESPONSE"
-    if [[ "$APP1_RESPONSE" != *"connection_failed"* ]]; then
+    if [[ "$APP1_RESPONSE" != *"connection_failed" ]]; then
         break
     fi
     sleep 5
@@ -58,13 +58,13 @@ STAGE_START=$(date +%s)
 
 # API Regression Tests
 echo "Running API regression tests..."
-HEALTH_TEST=$(curl -s http://qualitygatepoc-app-1:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
-STATS_TEST=$(curl -s http://qualitygatepoc-app-1:5000/api/v1/stats | grep -q "total_transactions" && echo "PASS" || echo "FAIL")
+HEALTH_TEST=$(curl -s http://app:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
+STATS_TEST=$(curl -s http://app:5000/api/v1/stats | grep -q "total_transactions" && echo "PASS" || echo "FAIL")
 
 # Transaction Test
 TXN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-  -d '{"customer_id": "CUST_00000002", "amount": 123.45, "transaction_type": "TEST"}' \
-  http://qualitygatepoc-app-1:5000/api/v1/transaction)
+    -d '{"customer_id": "CUST_00000002", "amount": 123.45, "transaction_type": "SALE"}' \
+    http://app:5000/api/v1/transaction)
 TXN_TEST=$(echo "$TXN_RESPONSE" | grep -q "SUCCESS" && echo "PASS" || echo "FAIL")
 
 echo "  • Health Endpoint: $HEALTH_TEST"
@@ -92,10 +92,10 @@ STAGE_START=$(date +%s)
 
 # Use our working PostgreSQL validation
 echo "Running database integrity checks..."
-DB_CONNECTION=$(timeout 5 curl -s http://qualitygatepoc-app-1:5000/api/v1/stats > /dev/null && echo "PASS" || echo "FAIL")
+DB_CONNECTION=$(timeout 5 curl -s http://app:5000/api/v1/stats > /dev/null && echo "PASS" || echo "FAIL")
 
 # Check data volume through API
-STATS_RESPONSE=$(curl -s http://qualitygatepoc-app-1:5000/api/v1/stats)
+STATS_RESPONSE=$(curl -s http://app:5000/api/v1/stats)
 TRANSACTION_COUNT=$(echo "$STATS_RESPONSE" | grep -o '"total_transactions":[^,}]*' | cut -d':' -f2)
 CUSTOMER_COUNT=$(echo "$STATS_RESPONSE" | grep -o '"unique_customers":[^,}]*' | cut -d':' -f2)
 
@@ -162,7 +162,7 @@ ERROR_TEST=$(curl -s -X POST -H "Content-Type: application/json" \
   http://qualitygatepoc-app-1:5000/api/v1/transaction | grep -q "error" && echo "PASS" || echo "FAIL")
 
 # Check infrastructure
-MULTI_INSTANCE=$(curl -s http://qualitygatepoc-app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
+MULTI_INSTANCE=$(curl -s http://app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
 
 echo "  • Error Handling: $ERROR_TEST"
 echo "  • Multi-Instance Setup: $MULTI_INSTANCE"
@@ -190,10 +190,10 @@ STAGE_START=$(date +%s)
 echo "Simulating production deployment..."
 
 # Health check post-deployment
-DEPLOY_HEALTH=$(curl -s http://qualitygatepoc-app-1:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
+DEPLOY_HEALTH=$(curl -s http://app:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
 
 # Service mesh validation
-SERVICE_MESH=$(curl -s http://qualitygatepoc-app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
+SERVICE_MESH=$(curl -s http://app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
 
 echo "  • Post-Deploy Health: $DEPLOY_HEALTH"
 echo "  • Service Mesh: $SERVICE_MESH"
