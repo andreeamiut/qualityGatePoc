@@ -55,14 +55,24 @@ jobs:
     - name: 🔍 Code Linting
       run: |
         echo "🔍 Running PyLint analysis..."
-        pylint app/ --output-format=text --reports=yes --exit-zero > pylint_report.txt
+        if [ -d "app" ]; then
+          pylint app/ --output-format=text --reports=yes --exit-zero > pylint_report.txt || true
+        else
+          echo "No app directory found, skipping pylint"
+          echo "No Python files to lint" > pylint_report.txt
+        fi
         cat pylint_report.txt
 
     - name: 🛡️ Security Scan
       run: |
         echo "🛡️ Running Bandit security analysis..."
-        bandit -r app/ -f json -o bandit_report.json || true
-        bandit -r app/ -f txt || true
+        if [ -d "app" ]; then
+          bandit -r app/ -f json -o bandit_report.json || true
+          bandit -r app/ -f txt || true
+        else
+          echo "No app directory found, skipping bandit"
+          echo '{"results": []}' > bandit_report.json
+        fi
 
     - name: 📊 Dependency Security Check
       run: |

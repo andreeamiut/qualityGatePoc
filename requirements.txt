@@ -1,0 +1,30 @@
+# Full-Spectrum QA Environment - Python Dependencies
+# This file is used by GitHub Actions workflows for dependency management
+
+# Core application dependencies
+Flask==2.3.3
+psycopg2-binary==2.9.7
+redis==5.0.1
+prometheus-client==0.17.1
+psutil==5.9.5
+
+# Development and testing dependencies
+pytest==7.4.3
+pytest-cov==4.1.0
+requests==2.31.0
+
+# Security and code quality tools
+bandit==1.7.5
+safety==2.3.4
+
+# Additional testing and automation dependencies
+docker==6.1.3
+pyyaml==6.0.1
+jinja2==3.1.2
+
+# Database utilities
+sqlalchemy==1.4.48
+alembic==1.12.1
+
+# Performance testing
+locust==2.17.0

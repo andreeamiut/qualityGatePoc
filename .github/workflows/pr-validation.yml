@@ -37,11 +37,15 @@ jobs:
         echo "🔍 Running quick code quality validation..."
         
         # Check for syntax errors
-        python -m py_compile app/*.py
-        
-        # Basic linting (non-blocking)
-        pip install pylint
-        pylint app/ --exit-zero --score=yes
+        if [ -d "app" ] && [ -n "$(ls app/*.py 2>/dev/null)" ]; then
+          python -m py_compile app/*.py
+          
+          # Basic linting (non-blocking)
+          pip install pylint
+          pylint app/ --exit-zero --score=yes
+        else
+          echo "No Python files found in app directory, skipping syntax check"
+        fi
 
     - name: 🏗️ Build Test
       run: |
