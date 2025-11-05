@@ -305,7 +305,11 @@ jobs:
     - name: 🚀 Start Full Environment
       run: |
         docker compose -f docker-compose.prod.yml up -d
-        sleep 60
+        echo "⏳ Waiting for services to stabilize..."
+        sleep 90
+        
+        echo "🔍 Checking service status..."
+        docker compose -f docker-compose.prod.yml ps
 
     - name: 🤖 Execute Full CI/CD Suite
       run: |
@@ -333,11 +337,14 @@ jobs:
       run: |
         echo "📊 Analyzing CI/CD pipeline results..."
         
+        # Look for either success pattern
         if grep -q "CI/CD PIPELINE: SUCCESS" cicd_pipeline_results.txt; then
           echo "✅ CI/CD Pipeline validation PASSED"
           echo "pipeline_status=success" >> $GITHUB_ENV
         else
           echo "❌ CI/CD Pipeline validation FAILED"
+          echo "🔍 Last 20 lines of output:"
+          tail -20 cicd_pipeline_results.txt
           echo "pipeline_status=failed" >> $GITHUB_ENV
           exit 1
         fi
