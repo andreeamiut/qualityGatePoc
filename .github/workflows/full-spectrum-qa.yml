@@ -407,7 +407,20 @@ jobs:
 
     - name: 🎉 Deployment Readiness Check
       run: |
-        if [[ "$DEPLOYMENT_READY" == "true" ]]; then
+        # Check if all required jobs passed
+        CODE_QUALITY="${{ needs.code-quality.result }}"
+        BUILD_TEST="${{ needs.build-and-test.result }}"
+        COMPREHENSIVE="${{ needs.comprehensive-testing.result }}"
+        CICD_VALIDATION="${{ needs.cicd-validation.result }}"
+        
+        echo "📊 Quality Gate Results:"
+        echo "  • Code Quality: $CODE_QUALITY"
+        echo "  • Build & Test: $BUILD_TEST" 
+        echo "  • Comprehensive Testing: $COMPREHENSIVE"
+        echo "  • CI/CD Validation: $CICD_VALIDATION"
+        echo ""
+        
+        if [[ "$CODE_QUALITY" == "success" && "$BUILD_TEST" == "success" && "$COMPREHENSIVE" == "success" && "$CICD_VALIDATION" == "success" ]]; then
           echo "🎉 System is ready for production deployment!"
           echo "✅ All quality gates passed"
           echo "✅ CI/CD pipeline validated"
