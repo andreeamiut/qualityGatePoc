@@ -311,12 +311,20 @@ jobs:
       run: |
         echo "🤖 Running autonomous CI/CD pipeline validation..."
         
+        # Check service health first
+        echo "🔍 Checking service health..."
+        docker compose -f docker-compose.prod.yml ps
+        
         # Copy our CI/CD pipeline script to the automation container
         docker cp cicd_pipeline.sh qualitygatepoc-automation-1:/opt/automation/
         
-        # Execute the full pipeline
+        # Execute the full pipeline with better error handling
         docker exec qualitygatepoc-automation-1 bash -c "
           cd /opt/automation
+          echo '🔍 Testing network connectivity...'
+          curl -s http://qualitygatepoc-app-1:5000/health || echo 'Failed to reach app-1'
+          curl -s http://qualitygatepoc-app-2-1:5000/health || echo 'Failed to reach app-2'
+          echo '🚀 Starting CI/CD pipeline...'
           chmod +x cicd_pipeline.sh
           ./cicd_pipeline.sh
         " | tee cicd_pipeline_results.txt
