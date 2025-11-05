@@ -9,8 +9,11 @@ services:
       - "5000:5000"
     environment:
       - FLASK_ENV=production
-      - DATABASE_URL=postgresql://b2b_user:secure_b2b_pass@db:5432/b2b_transactions
-      - REDIS_URL=redis://redis:6379
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=b2b_transactions
+      - DB_USER=b2b_user
+      - DB_PASSWORD=secure_b2b_pass
     depends_on:
       - db
       - redis
@@ -30,8 +33,11 @@ services:
       - "5001:5000"
     environment:
       - FLASK_ENV=production
-      - DATABASE_URL=postgresql://b2b_user:secure_b2b_pass@db:5432/b2b_transactions
-      - REDIS_URL=redis://redis:6379
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=b2b_transactions
+      - DB_USER=b2b_user
+      - DB_PASSWORD=secure_b2b_pass
     depends_on:
       - db
       - redis
