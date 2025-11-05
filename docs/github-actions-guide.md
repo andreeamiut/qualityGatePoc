@@ -8,7 +8,7 @@ This repository includes a comprehensive suite of GitHub Actions workflows that 
 
 | Workflow | Trigger | Purpose | Duration |
 |----------|---------|---------|----------|
-| **Full-Spectrum QA** | Push to main/develop, PR, Schedule | Complete quality validation | ~5-8 minutes |
+| **Full-Spectrum QA** | Push to master/develop, PR, Schedule | Complete quality validation | ~5-8 minutes |
 | **PR Validation** | Pull requests | Fast validation for PRs | ~2-3 minutes |
 | **Production Deployment** | Releases, Manual | Production deployments | ~10-15 minutes |
 | **Security & Maintenance** | Daily schedule, Dependencies | Security scanning & updates | ~3-5 minutes |
@@ -20,8 +20,8 @@ This repository includes a comprehensive suite of GitHub Actions workflows that 
 ### 1. 🚀 Full-Spectrum QA Pipeline (`full-spectrum-qa.yml`)
 
 **Triggers:**
-- Push to `main` or `develop` branches
-- Pull requests to `main`
+- Push to `master` or `develop` branches
+- Pull requests to `master`
 - Nightly schedule (2 AM UTC)
 - Manual dispatch with test level options
 
@@ -150,7 +150,7 @@ Create GitHub environments:
 - `production` - Manual approval required
 
 #### 3. Branch Protection
-Configure branch protection for `main`:
+Configure branch protection for `master`:
 - Require PR reviews
 - Require status checks:
   - `🔍 Code Quality & Security`
@@ -236,7 +236,7 @@ gh run download <run-id>
 
 ### Quality Assurance
 - All code must pass PR validation
-- Full QA pipeline must succeed before merge to main
+- Full QA pipeline must succeed before merge to master
 - Performance regressions trigger alerts
 - Security issues block deployment
 

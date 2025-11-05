@@ -2,9 +2,9 @@ name: 🚀 Full-Spectrum QA Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, develop ]
   pull_request:
-    branches: [ main ]
+    branches: [ master ]
   schedule:
     # Run nightly at 2 AM UTC
     - cron: '0 2 * * *'

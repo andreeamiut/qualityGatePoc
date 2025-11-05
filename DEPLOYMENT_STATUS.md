@@ -71,7 +71,7 @@ performance/
 ### 🚀 **Automated Workflows Now Available:**
 
 1. **🎯 Full-Spectrum QA Pipeline**
-   - **Triggers:** Push to main/develop, PRs, nightly schedule
+   - **Triggers:** Push to master/develop, PRs, nightly schedule
    - **Stages:** Code quality → Build → Testing → CI/CD validation → Quality gates
    - **Duration:** 5-8 minutes
    - **Quality Score:** 80/100 target
@@ -109,7 +109,7 @@ https://github.com/andreeamiut/qualityGatePoc
 
 ### 3. **Enable Branch Protection:**
 - Go to **Repository Settings → Branches**
-- Add rule for `main` branch:
+- Add rule for `master` branch:
   - ✅ Require PR reviews
   - ✅ Require status checks
   - ✅ Require Full-Spectrum QA Pipeline to pass
