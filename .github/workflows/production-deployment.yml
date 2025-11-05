@@ -43,7 +43,7 @@ jobs:
         echo "🔍 Running pre-deployment quality validation..."
         
         # Start services for validation
-        docker-compose up -d
+        docker compose up -d
         sleep 30
         
         # Run our comprehensive CI/CD pipeline validation
@@ -69,7 +69,7 @@ jobs:
         fi
         
         # Cleanup
-        docker-compose down -v
+        docker compose down -v
 
   # ==========================================
   # Build & Push Container Images

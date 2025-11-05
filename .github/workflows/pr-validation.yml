@@ -50,14 +50,14 @@ jobs:
     - name: 🏗️ Build Test
       run: |
         echo "🏗️ Testing Docker build process..."
-        docker-compose build
+        docker compose build
 
     - name: 🧪 Fast Integration Test
       run: |
         echo "🧪 Running fast integration tests..."
         
         # Start services
-        docker-compose up -d
+        docker compose up -d
         sleep 20
         
         # Quick health checks
@@ -96,5 +96,5 @@ jobs:
     - name: 🧹 Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
         docker system prune -af

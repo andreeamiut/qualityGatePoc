@@ -1,0 +1,106 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://b2b_user:secure_b2b_pass@db:5432/b2b_transactions
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  app-2:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://b2b_user:secure_b2b_pass@db:5432/b2b_transactions
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: b2b_transactions
+      POSTGRES_USER: b2b_user
+      POSTGRES_PASSWORD: secure_b2b_pass
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/postgres:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U b2b_user -d b2b_transactions"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+
+  # Production load balancer (nginx)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./loadbalancer/nginx.prod.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - app
+      - app-2
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  prometheus_data:

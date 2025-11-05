@@ -181,8 +181,8 @@ jobs:
         echo "🧪 Testing system with updated dependencies..."
         
         # Start services with new dependencies
-        docker-compose build
-        docker-compose up -d
+        docker compose build
+        docker compose up -d
         sleep 20
         
         # Quick validation
@@ -191,7 +191,7 @@ jobs:
         echo "✅ Updated dependencies validation passed"
         
         # Cleanup
-        docker-compose down -v
+        docker compose down -v
 
     - name: 📝 Create Pull Request
       if: steps.check-updates.outputs.updates_available == 'true'
@@ -238,7 +238,7 @@ jobs:
 
     - name: 🚀 Start Performance Testing Environment
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30
 
     - name: 📊 Baseline Performance Measurement
@@ -344,7 +344,7 @@ jobs:
     - name: 🧹 Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
 
   # ==========================================
   # Health Check & Uptime Monitoring
@@ -362,7 +362,7 @@ jobs:
         echo "🩺 Running comprehensive system health checks..."
         
         # Start full system
-        docker-compose up -d
+        docker compose up -d
         sleep 45
         
         # Health check matrix
@@ -436,5 +436,5 @@ jobs:
     - name: 🧹 Final Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
         docker system prune -af

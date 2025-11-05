@@ -115,18 +115,18 @@ jobs:
     - name: 🏗️ Build Docker Images
       run: |
         echo "🏗️ Building application containers..."
-        docker-compose build
+        docker compose build
 
     - name: 🚀 Start Services
       run: |
         echo "🚀 Starting full service stack..."
-        docker-compose up -d
+        docker compose up -d
         
         echo "⏳ Waiting for services to be ready..."
         sleep 30
         
         echo "🔍 Checking service health..."
-        docker-compose ps
+        docker compose ps
 
     - name: 🩺 Health Check Validation
       run: |
@@ -166,7 +166,7 @@ jobs:
         echo "📊 Generating infrastructure status report..."
         
         echo "=== DOCKER CONTAINER STATUS ===" > infrastructure_report.txt
-        docker-compose ps >> infrastructure_report.txt
+        docker compose ps >> infrastructure_report.txt
         
         echo -e "\n=== RESOURCE USAGE ===" >> infrastructure_report.txt
         docker stats --no-stream >> infrastructure_report.txt
@@ -185,7 +185,7 @@ jobs:
     - name: 🧹 Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
         docker system prune -af
 
   # ==========================================
@@ -205,7 +205,7 @@ jobs:
 
     - name: 🚀 Start Test Environment
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 30
 
     - name: 🧪 Run ${{ matrix.test-type }} Tests
@@ -285,7 +285,7 @@ jobs:
     - name: 🧹 Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
 
   # ==========================================
   # Stage 4: CI/CD Pipeline Validation
@@ -301,7 +301,7 @@ jobs:
 
     - name: 🚀 Start Full Environment
       run: |
-        docker-compose up -d
+        docker compose up -d
         sleep 45
 
     - name: 🤖 Execute Full CI/CD Suite
@@ -340,7 +340,7 @@ jobs:
     - name: 🧹 Final Cleanup
       if: always()
       run: |
-        docker-compose down -v
+        docker compose down -v
         docker system prune -af
 
   # ==========================================
