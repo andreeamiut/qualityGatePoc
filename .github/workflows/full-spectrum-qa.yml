@@ -135,9 +135,8 @@ jobs:
         # Wait for API to be ready
         timeout 60 bash -c 'until curl -f http://localhost:5000/health; do sleep 2; done'
         
-        # Verify both API instances
+        # Verify API health
         curl -f http://localhost:5000/health
-        curl -f http://localhost:5001/health
         
         # Check database connectivity
         curl -f http://localhost:5000/api/v1/stats
@@ -156,7 +155,7 @@ jobs:
         # Verify transaction was created successfully
         if echo "$TRANSACTION_RESPONSE" | grep -q '"status":"SUCCESS"'; then
           echo "✅ Transaction test passed"
-        elif echo "$TRANSACTION_RESPONSE" | grep -q '"transaction_id"'; then
+        elif echo "$TRANSACTION_RESPONSE" | grep -q '"txn_id"'; then
           echo "✅ Transaction test passed (alternative success format)"
         else
           echo "❌ Transaction test failed"

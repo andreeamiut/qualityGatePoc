@@ -74,10 +74,10 @@ jobs:
         
         # Test transaction endpoint
         TXN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-          -d '{"customer_id": "CUST_PR_TEST", "amount": 50.00, "transaction_type": "PR_VALIDATION"}' \
+          -d '{"customer_id": "CUST_00000001", "amount": 50.00, "transaction_type": "debit"}' \
           http://localhost:5000/api/v1/transaction)
         
-        if echo "$TXN_RESPONSE" | grep -q "SUCCESS\|transaction_id"; then
+        if echo "$TXN_RESPONSE" | grep -q "SUCCESS\|txn_id"; then
           echo "✅ Transaction API test passed"
         else
           echo "❌ Transaction API test failed"

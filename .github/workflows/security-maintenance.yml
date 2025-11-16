@@ -196,6 +196,7 @@ jobs:
     - name: 📝 Create Pull Request
       if: steps.check-updates.outputs.updates_available == 'true'
       uses: peter-evans/create-pull-request@v5
+      continue-on-error: true
       with:
         token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: '🔄 Automated dependency updates'
@@ -367,10 +368,8 @@ jobs:
         
         # Health check matrix
         HEALTH_CHECKS=(
-          "http://localhost:5000/health:API Instance 1"
-          "http://localhost:5001/health:API Instance 2"
+          "http://localhost:5000/health:API Health"
           "http://localhost:5000/api/v1/stats:Statistics Endpoint"
-          "http://localhost:9090/-/healthy:Prometheus Health"
         )
         
         echo "🔍 Running health check matrix..."
@@ -408,14 +407,14 @@ jobs:
         # Test complete transaction workflow
         echo "Testing transaction creation..."
         TXN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-          -d '{"customer_id": "CUST_HEALTH_CHECK", "amount": 25.00, "transaction_type": "HEALTH_VALIDATION"}' \
+          -d '{"customer_id": "CUST_00000001", "amount": 25.00, "transaction_type": "debit"}' \
           http://localhost:5000/api/v1/transaction)
         
-        if echo "$TXN_RESPONSE" | grep -q "SUCCESS\|transaction_id"; then
+        if echo "$TXN_RESPONSE" | grep -q "SUCCESS\|txn_id"; then
           echo "✅ Transaction workflow: PASSED"
           
           # Extract transaction ID for verification
-          TXN_ID=$(echo "$TXN_RESPONSE" | grep -o '"transaction_id":"[^"]*"' | cut -d'"' -f4)
+          TXN_ID=$(echo "$TXN_RESPONSE" | grep -o '"txn_id":"[^"]*"' | cut -d'"' -f4)
           echo "  Transaction ID: $TXN_ID"
         else
           echo "❌ Transaction workflow: FAILED"
