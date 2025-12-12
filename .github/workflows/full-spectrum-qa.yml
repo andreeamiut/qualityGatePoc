@@ -318,8 +318,7 @@ jobs:
         echo "🔍 Checking service health..."
         docker compose -f docker-compose.prod.yml ps
         
-        # Copy our CI/CD pipeline script to the automation container
-        docker cp automation/cicd_pipeline.sh qualitygatepoc-automation-1:/opt/automation/
+        # Automation folder is mounted as volume, no need to copy
         
         # Execute the full pipeline with better error handling
         docker exec qualitygatepoc-automation-1 bash -c "
