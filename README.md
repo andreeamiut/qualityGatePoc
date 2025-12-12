@@ -53,7 +53,7 @@
 ### 1. Environment Setup
 ```powershell
 # Clone and navigate to project
-cd c:\Users\user\Work\qualityGatePOC
+cd path/to/quality-gate-platform
 
 # Start core services (app + database)
 docker-compose up -d app postgres-db
@@ -428,4 +428,4 @@ This environment provides a complete, production-ready QA validation system with
 
 ---
 
-<p align="center">Made with ❤️ for DevOps & QA Excellence</p>
+<p align="center">Made for DevOps & QA Excellence</p>
