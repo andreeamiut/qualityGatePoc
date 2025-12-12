@@ -50,7 +50,7 @@ STATS_TEST=$(curl -s http://app:5000/api/v1/stats | grep -q "total_transactions"
 
 # Transaction Test
 TXN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
-  -d '{"customer_id": "CUST_00000002", "amount": 123.45, "transaction_type": "TEST"}' \
+  -d '{"customer_id": "CUST_00000002", "amount": 123.45, "transaction_type": "credit"}' \
   http://app:5000/api/v1/transaction)
 TXN_TEST=$(echo "$TXN_RESPONSE" | grep -q "SUCCESS" && echo "PASS" || echo "FAIL")
 
