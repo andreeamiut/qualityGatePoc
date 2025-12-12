@@ -33,7 +33,7 @@
 
 ### Core Components
 - **Flask API Application**: B2B transaction processing service
-- **Oracle Database**: 210,000+ records across 3 joined tables
+- **PostgreSQL Database**: 50,000+ records across 3 joined tables
 - **JMeter Performance Testing**: 50 concurrent users, 250ms P90 threshold
 - **Jenkins CI/CD Pipeline**: Automated validation stages
 - **Autonomous Agents**: SQL Agent, BASH Agent, Performance Agent
@@ -56,7 +56,7 @@
 cd c:\Users\user\Work\qualityGatePOC
 
 # Start core services (app + database)
-docker-compose up -d app oracle-db
+docker-compose up -d app postgres-db
 
 # Wait for services to initialize (2-3 minutes)
 docker-compose logs -f app
@@ -67,7 +67,7 @@ docker-compose logs -f app
 # Initialize database with test data
 make init-db
 # OR manually:
-# docker-compose exec oracle-db sqlplus b2b_user/b2b_password@//localhost:1521/ORCLPDB1 @/docker-entrypoint-initdb.d/01_schema.sql
+# docker-compose exec postgres-db sqlplus b2b_user/b2b_password@//localhost:5432/b2b_db @/docker-entrypoint-initdb.d/01_schema.sql
 ```
 
 ### 3. Verify Application
@@ -180,11 +180,11 @@ When performance tests fail (P90 > 250ms), the system automatically:
 
 ## 🗄️ Database Configuration
 
-### Oracle Database Details
+### PostgreSQL Database Details
 - **Service**: ORCLPDB1
 - **User**: b2b_user / b2b_password
 - **Port**: 1521
-- **Data Volume**: 210,000+ records
+- **Data Volume**: 50,000+ records
   - Customers: 50,000
   - Transactions: 80,000
   - Audit Records: 80,000
@@ -251,7 +251,7 @@ The SQL Agent validates data integrity using complex queries across all 3 tables
 ```bash
 # Application Configuration
 BASE_URL=http://app:5000
-DB_HOST=oracle-db
+DB_HOST=postgres-db
 DB_USER=b2b_user
 DB_PASSWORD=b2b_password
 
@@ -346,17 +346,17 @@ Modify `cicd/Jenkinsfile` to:
 # Check logs
 docker-compose logs app
 # Verify database connectivity
-docker-compose exec app ping oracle-db
+docker-compose exec app ping postgres-db
 ```
 
 **Database Connection Failures**:
 ```bash
 # Verify Oracle container status
-docker-compose ps oracle-db
+docker-compose ps postgres-db
 # Check database logs
-docker-compose logs oracle-db
+docker-compose logs postgres-db
 # Test connection manually
-docker-compose exec oracle-db sqlplus b2b_user/b2b_password@//localhost:1521/ORCLPDB1
+docker-compose exec postgres-db sqlplus b2b_user/b2b_password@//localhost:5432/b2b_db
 ```
 
 **Performance Test Failures**:
@@ -375,7 +375,7 @@ cat performance/results/performance_summary.json
 curl http://localhost:5000/health
 
 # Database connectivity  
-docker-compose exec automation-agent ping oracle-db
+docker-compose exec automation-agent ping postgres-db
 
 # Service status
 docker-compose ps
@@ -394,14 +394,14 @@ docker stats --no-stream
 | Jenkins | http://localhost:8080 | admin/admin |
 | Prometheus | http://localhost:9090 | - |
 | Grafana | http://localhost:3000 | admin/admin123 |
-| Oracle DB | localhost:1521/ORCLPDB1 | b2b_user/b2b_password |
+| PostgreSQL DB | localhost:5432/b2b_db | b2b_user/b2b_password |
 
 ## 🎯 Success Criteria Validation
 
 The environment successfully validates:
 
 ✅ **Deployment**: Resource-constrained application service (2 CPU, 4GB RAM)
-✅ **Database Integration**: Oracle 19 with 210,000+ records across 3 joined tables  
+✅ **Database Integration**: PostgreSQL 13 with 50,000+ records across 3 joined tables  
 ✅ **Performance Testing**: JMeter with 50 concurrent users, 250ms P90 threshold
 ✅ **CI/CD Pipeline**: Complete automation with 4 validation stages
 ✅ **Agentic Self-Correction**: Auto-diagnosis with scaling recommendations
@@ -418,3 +418,14 @@ For issues or enhancements:
 4. Use the built-in health checks and monitoring
 
 This environment provides a complete, production-ready QA validation system with autonomous capabilities and self-healing recommendations.
+
+---
+
+## 👤 Author
+
+**Andreea Miut**  
+[![GitHub](https://img.shields.io/badge/GitHub-@andreeamiut-181717?logo=github)](https://github.com/andreeamiut)
+
+---
+
+<p align="center">Made with ❤️ for DevOps & QA Excellence</p>

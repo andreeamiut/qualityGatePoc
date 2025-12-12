@@ -10,7 +10,7 @@ services:
     environment:
       - FLASK_ENV=production
       - PYTHONUNBUFFERED=1
-      - DB_HOST=oracle-db
+      - DB_HOST=postgres-db
       - DB_PORT=5432
       - DB_NAME=b2b_db
       - DB_USER=b2b_user
@@ -19,7 +19,7 @@ services:
       - ./logs:/opt/app/logs
       - app_logs:/opt/app/logs
     depends_on:
-      - oracle-db
+      - postgres-db
     networks:
       - b2b-network
     # Resource constraints as specified (2 CPU, 4GB RAM)
@@ -39,9 +39,9 @@ services:
       start_period: 40s
 
   # PostgreSQL Database (Simplified for Demo)
-  oracle-db:
+  postgres-db:
     image: postgres:13
-    container_name: qualitygatepoc-oracle-db-1
+    container_name: qualitygatepoc-postgres-db-1
     environment:
       - POSTGRES_DB=b2b_db
       - POSTGRES_USER=b2b_user
@@ -133,7 +133,7 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - APP_URL=http://app:5000
-      - DB_HOST=oracle-db
+      - DB_HOST=postgres-db
       - DB_PORT=5432
       - DB_NAME=b2b_db
       - DB_USER=b2b_user
@@ -143,7 +143,7 @@ services:
       - b2b-network
     depends_on:
       - app
-      - oracle-db
+      - postgres-db
     profiles:
       - automation
     deploy:
