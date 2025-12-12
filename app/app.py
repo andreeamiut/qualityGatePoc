@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)  # Get logger for this module
 
 # Database connection configuration from environment variables
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'oracle-db'),  # Database host (default: oracle-db)
+    'host': os.getenv('DB_HOST', 'postgres-db'),  # Database host (default: oracle-db)
     'port': int(os.getenv('DB_PORT', '5432')),  # Database port (default: 5432)
     'database': os.getenv('DB_NAME', 'b2b_db'),  # Database name (default: b2b_db)
     'user': os.getenv('DB_USER', 'b2b_user'),  # Database username (default: b2b_user)
