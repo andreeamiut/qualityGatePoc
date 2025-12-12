@@ -15,11 +15,13 @@ services:
       - DB_NAME=b2b_db
       - DB_USER=b2b_user
       - DB_PASSWORD=b2b_password
+      - REDIS_ENABLED=true
     volumes:
       - ./logs:/opt/app/logs
       - app_logs:/opt/app/logs
     depends_on:
       - postgres-db
+      - redis
     networks:
       - b2b-network
     # Resource constraints as specified (2 CPU, 4GB RAM)
@@ -31,6 +33,46 @@ services:
         reservations:
           cpus: '1.0'
           memory: 2G
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # B2B Transaction API Application - Instance 2
+  app-2:
+    build: 
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: qualitygatepoc-app-2
+    ports:
+      - "5001:5000"
+    environment:
+      - FLASK_ENV=production
+      - PYTHONUNBUFFERED=1
+      - DB_HOST=postgres-db
+      - DB_PORT=5432
+      - DB_NAME=b2b_db
+      - DB_USER=b2b_user
+      - DB_PASSWORD=b2b_password
+      - REDIS_ENABLED=true
+    volumes:
+      - ./logs:/opt/app/logs
+      - app_logs:/opt/app/logs
+    depends_on:
+      - postgres-db
+      - redis
+    networks:
+      - b2b-network
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
@@ -66,6 +108,26 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Redis Cache for Performance
+  redis:
+    image: redis:7-alpine
+    container_name: qualitygatepoc-redis-1
+    ports:
+      - "6379:6379"
+    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - b2b-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
 
   # JMeter Performance Testing Container
   jmeter:
@@ -166,8 +228,8 @@ services:
       - prometheus_data:/prometheus
     networks:
       - b2b-network
-    profiles:
-      - monitoring
+    depends_on:
+      - app
     deploy:
       resources:
         limits:

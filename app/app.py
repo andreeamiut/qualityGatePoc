@@ -1,217 +1,230 @@
 # Standard library imports
-from datetime import datetime  # For timestamp handling
-import json  # For JSON serialization/deserialization
-import logging  # For application logging
-import os  # For environment variable access and file operations
-import threading  # For thread-safe database connection pooling
-import time  # For performance timing measurements
-import uuid  # For generating unique transaction IDs
-from contextlib import contextmanager  # For context manager decorator
-from typing import Optional, Any, Dict  # Type hints for better code documentation
+from datetime import datetime
+import json
+import logging
+import os
+import threading
+import time
+import uuid
+from contextlib import contextmanager
+from typing import Optional, Any, Dict
 
 # Third-party imports
-from flask import Flask, request, jsonify  # Flask web framework
-from werkzeug.exceptions import HTTPException  # HTTP exception handling
-import psycopg2  # PostgreSQL database driver
-import psycopg2.pool  # Connection pooling for database
-import redis  # Redis cache client
+from flask import Flask, request, jsonify
+from werkzeug.exceptions import HTTPException
+import psycopg2
+import psycopg2.pool
+import redis
 
 # Initialize Flask application
 app = Flask(__name__)
 
-# Application constants for configuration and maintainability
-LOG_DIR = '/opt/app/logs'  # Directory for application logs
-LOG_FILE = os.path.join(LOG_DIR, 'portal.log')  # Main log file path
-DB_MIN_CONN = 5  # Minimum database connections in pool
-DB_MAX_CONN = 20  # Maximum database connections in pool
-REDIS_HOST = 'redis'  # Redis server hostname
-REDIS_PORT = 6379  # Redis server port
-REDIS_DB = 0  # Redis database number
-PROCESSING_DELAY_MS = 0  # Removed simulated delay for performance (set to 0)
-TRANSACTION_TYPES = ['debit', 'credit']  # Supported transaction types
-STATS_CACHE_TTL = 300  # Cache TTL for statistics in seconds (5 minutes)
-LOG_TRANSACTION_FAILED = "B2B_TRANSACTION_FAILED|TXN_ID:%s|ERROR:%s|PROCESSING_TIME:%.2fms"  # Log format for failed transactions
+# Application constants - OPTIMIZED for high concurrency
+LOG_DIR = '/opt/app/logs'
+LOG_FILE = os.path.join(LOG_DIR, 'portal.log')
+DB_MIN_CONN = 10   # Increased from 5
+DB_MAX_CONN = 50   # Increased from 20 for high concurrency
+REDIS_HOST = 'redis'
+REDIS_PORT = 6379
+REDIS_DB = 0
+PROCESSING_DELAY_MS = 0
+TRANSACTION_TYPES = ['debit', 'credit']
+STATS_CACHE_TTL = 300
+LOG_TRANSACTION_FAILED = "B2B_TRANSACTION_FAILED|TXN_ID:%s|ERROR:%s|PROCESSING_TIME:%.2fms"
 
-# Configure application logging
-os.makedirs(LOG_DIR, exist_ok=True)  # Create log directory if it doesn't exist
+# Configure logging
+os.makedirs(LOG_DIR, exist_ok=True)
 logging.basicConfig(
-    level=logging.INFO,  # Set logging level to INFO
-    format='%(asctime)s - %(levelname)s - %(message)s',  # Log format with timestamp and level
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler(LOG_FILE),  # Log to file
-        logging.StreamHandler()  # Also log to console
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler()
     ]
 )
-logger = logging.getLogger(__name__)  # Get logger for this module
+logger = logging.getLogger(__name__)
 
-# Database connection configuration from environment variables
+# Database configuration
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'postgres-db'),  # Database host (default: oracle-db)
-    'port': int(os.getenv('DB_PORT', '5432')),  # Database port (default: 5432)
-    'database': os.getenv('DB_NAME', 'b2b_db'),  # Database name (default: b2b_db)
-    'user': os.getenv('DB_USER', 'b2b_user'),  # Database username (default: b2b_user)
-    'password': os.getenv('DB_PASSWORD', 'b2b_password')  # Database password (default: b2b_password)
+    'host': os.getenv('DB_HOST', 'postgres-db'),
+    'port': int(os.getenv('DB_PORT', '5432')),
+    'database': os.getenv('DB_NAME', 'b2b_db'),
+    'user': os.getenv('DB_USER', 'b2b_user'),
+    'password': os.getenv('DB_PASSWORD', 'b2b_password')
 }
 
-# Database connection manager with thread-safe pool management
 class DatabaseConnectionManager:
     """Manages database connections using a thread-safe connection pool."""
 
     def __init__(self) -> None:
-        self.pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None  # Connection pool instance
-        self.lock = threading.Lock()  # Thread lock for pool initialization
+        self.pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
+        self.lock = threading.Lock()
 
     def init_pool(self) -> None:
-        """Initialize the database connection pool if not already created."""
-        with self.lock:  # Ensure thread-safe pool creation
+        with self.lock:
             if self.pool is None:
                 try:
                     self.pool = psycopg2.pool.ThreadedConnectionPool(
-                        minconn=DB_MIN_CONN,  # Minimum connections
-                        maxconn=DB_MAX_CONN,  # Maximum connections
-                        **DB_CONFIG  # Unpack database configuration
+                        minconn=DB_MIN_CONN,
+                        maxconn=DB_MAX_CONN,
+                        **DB_CONFIG
                     )
-                    logger.info("Database connection pool initialized successfully")
+                    logger.info("Database connection pool initialized (min=%d, max=%d)", 
+                               DB_MIN_CONN, DB_MAX_CONN)
                 except psycopg2.Error as e:
                     logger.error("Failed to create connection pool: %s", e)
-                    raise  # Re-raise to indicate initialization failure
+                    raise
 
     @contextmanager
     def get_connection(self):
-        """Context manager that provides a database connection and ensures it's returned to the pool."""
         if self.pool is None:
-            self.init_pool()  # Lazy initialization of pool
+            self.init_pool()
         conn = None
         try:
-            conn = self.pool.getconn()  # Get connection from pool
-            yield conn  # Provide connection to caller
+            conn = self.pool.getconn()
+            yield conn
         except psycopg2.Error as e:
             logger.error("Database connection failed: %s", e)
-            raise  # Re-raise database errors
+            raise
         finally:
             if conn:
                 try:
-                    self.pool.putconn(conn)  # Return connection to pool
+                    self.pool.putconn(conn)
                 except psycopg2.Error as e:
                     logger.error("Failed to return connection to pool: %s", e)
 
-# Global database connection manager instance
 db_manager = DatabaseConnectionManager()
 
-# Redis cache initialization with graceful fallback
-REDIS_CLIENT: Optional[redis.Redis] = None  # Redis client instance
-REDIS_ENABLED = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'  # Check if Redis is enabled
+# Redis cache with connection pool for high concurrency
+REDIS_CLIENT: Optional[redis.Redis] = None
+REDIS_ENABLED = os.getenv('REDIS_ENABLED', 'false').lower() == 'true'
 
 if REDIS_ENABLED:
     try:
-        REDIS_CLIENT = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB,
-                                    decode_responses=True)  # Create Redis client
-        REDIS_CLIENT.ping()  # Test connection
-        logger.info("Redis cache connected successfully")
+        redis_pool = redis.ConnectionPool(
+            host=REDIS_HOST,
+            port=REDIS_PORT,
+            db=REDIS_DB,
+            max_connections=100,
+            socket_timeout=0.1,
+            socket_connect_timeout=0.1,
+            retry_on_timeout=True,
+            health_check_interval=30,
+            decode_responses=True
+        )
+        REDIS_CLIENT = redis.Redis(connection_pool=redis_pool)
+        REDIS_CLIENT.ping()
+        logger.info("Redis cache connected with connection pool (max=100)")
     except redis.ConnectionError:
-        logger.warning("Redis configured but not available, running without cache")
-        REDIS_CLIENT = None  # Disable cache if connection fails
+        logger.warning("Redis not available, running without cache")
+        REDIS_CLIENT = None
 else:
     logger.info("Redis cache disabled")
 
+
+def get_cached(key: str) -> Optional[str]:
+    """Get value from cache with fast timeout."""
+    if not REDIS_CLIENT:
+        return None
+    try:
+        return REDIS_CLIENT.get(key)
+    except redis.RedisError:
+        return None
+
+
+def set_cached(key: str, value: str, ttl: int = STATS_CACHE_TTL) -> None:
+    """Set cache value with error handling."""
+    if not REDIS_CLIENT:
+        return
+    try:
+        REDIS_CLIENT.setex(key, ttl, value)
+    except redis.RedisError:
+        pass
+
+
 def validate_transaction_data(data: Dict[str, Any]) -> Dict[str, Any]:
     """Validate and sanitize transaction request data."""
-    required_fields = ['customer_id', 'amount', 'transaction_type']  # Required fields for transaction
+    required_fields = ['customer_id', 'amount', 'transaction_type']
     for field in required_fields:
         if field not in data:
-            raise ValueError(f"Missing required field: {field}")  # Ensure all required fields are present
+            raise ValueError(f"Missing required field: {field}")
 
-    customer_id = str(data['customer_id']).strip()  # Convert to string and remove whitespace
+    customer_id = str(data['customer_id']).strip()
     if not customer_id:
-        raise ValueError("Customer ID cannot be empty")  # Reject empty customer IDs
+        raise ValueError("Customer ID cannot be empty")
 
     try:
-        amount = float(data['amount'])  # Convert amount to float
+        amount = float(data['amount'])
         if amount <= 0:
-            raise ValueError("Amount must be positive")  # Ensure positive amount
+            raise ValueError("Amount must be positive")
     except (ValueError, TypeError) as exc:
-        raise ValueError("Amount must be a valid positive number") from exc  # Handle invalid amount formats
+        raise ValueError("Amount must be a valid positive number") from exc
 
-    transaction_type = str(data['transaction_type']).strip().lower()  # Normalize transaction type
+    transaction_type = str(data['transaction_type']).strip().lower()
     if transaction_type not in TRANSACTION_TYPES:
-        raise ValueError(f"Transaction type must be one of: {', '.join(TRANSACTION_TYPES)}")  # Validate transaction type
+        raise ValueError(f"Transaction type must be one of: {', '.join(TRANSACTION_TYPES)}")
 
-    return {  # Return validated and sanitized data
+    return {
         'customer_id': customer_id,
         'amount': amount,
         'transaction_type': transaction_type
     }
 
+
 def execute_database_transaction(cursor: Any, txn_id: str, customer_id: str,
                                 amount: float, transaction_type: str) -> None:
-    """Execute all database operations for a transaction with proper error handling."""
-    # 1. Insert transaction record with PROCESSING status
-    insert_txn_sql = """
-    INSERT INTO transactions (txn_id, customer_id, amount,
-                               transaction_type, status, created_at)
-    VALUES (%s, %s, %s, %s, 'PROCESSING', NOW())
-    """
-    cursor.execute(insert_txn_sql, (txn_id, customer_id, amount, transaction_type))
+    """Execute all database operations for a transaction."""
+    cursor.execute("""
+        INSERT INTO transactions (txn_id, customer_id, amount,
+                                   transaction_type, status, created_at)
+        VALUES (%s, %s, %s, %s, 'PROCESSING', NOW())
+    """, (txn_id, customer_id, amount, transaction_type))
 
-    # 2. Retrieve current customer balance
     cursor.execute("SELECT balance FROM customers WHERE customer_id = %s", (customer_id,))
     result = cursor.fetchone()
     if result is None:
-        raise ValueError(f"Customer {customer_id} does not exist")  # Customer not found
-    old_balance = float(result[0])  # Convert balance to float
+        raise ValueError(f"Customer {customer_id} does not exist")
+    old_balance = float(result[0])
 
-    # 3. Calculate balance change based on transaction type
     if transaction_type == 'debit':
-        if old_balance < amount:  # Check if account has sufficient funds for debit
-            raise ValueError(f"Insufficient balance for debit transaction. "
-                             f"Current balance: {old_balance}, Debit amount: {amount}")  # Raise error with details
-        balance_change = -amount  # Set balance change to negative amount for debit
+        if old_balance < amount:
+            raise ValueError(f"Insufficient balance. Current: {old_balance}, Debit: {amount}")
+        balance_change = -amount
     elif transaction_type == 'credit':
-        balance_change = amount  # Positive change for credit
+        balance_change = amount
     else:
-        raise ValueError(f"Invalid transaction type: {transaction_type}")  # Should not reach here due to validation
+        raise ValueError(f"Invalid transaction type: {transaction_type}")
 
-    # Update customer balance and last transaction date
-    update_balance_sql = """
-    UPDATE customers
-    SET balance = balance + %s, last_transaction_date = NOW()
-    WHERE customer_id = %s
-    """
-    cursor.execute(update_balance_sql, (balance_change, customer_id))
+    cursor.execute("""
+        UPDATE customers
+        SET balance = balance + %s, last_transaction_date = NOW()
+        WHERE customer_id = %s
+    """, (balance_change, customer_id))
 
-    # 4. Insert audit record for transaction tracking
-    audit_sql = """
-    INSERT INTO transaction_audit (audit_id, txn_id, customer_id,
-                                    old_balance, new_balance,
-                                    audit_timestamp)
-    VALUES (%s, %s, %s, %s, %s, NOW())
-    """
-    audit_id = str(uuid.uuid4())  # Generate unique audit ID
-    new_balance = old_balance + balance_change  # Calculate new balance
-    cursor.execute(audit_sql, (audit_id, txn_id, customer_id, old_balance, new_balance))
+    audit_id = str(uuid.uuid4())
+    new_balance = old_balance + balance_change
+    cursor.execute("""
+        INSERT INTO transaction_audit (audit_id, txn_id, customer_id,
+                                        old_balance, new_balance, audit_timestamp)
+        VALUES (%s, %s, %s, %s, %s, NOW())
+    """, (audit_id, txn_id, customer_id, old_balance, new_balance))
 
-    # 5. Mark transaction as completed
-    cursor.execute("UPDATE transactions SET status = 'COMPLETED' "
-                    "WHERE txn_id = %s", (txn_id,))
+    cursor.execute("UPDATE transactions SET status = 'COMPLETED' WHERE txn_id = %s", (txn_id,))
+
 
 @app.route('/health', methods=['GET'])
 def health_check():
-    """Health check endpoint returning current status and timestamp."""
+    """Health check endpoint."""
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+
 
 @app.route('/api/v1/transaction', methods=['POST'])
 def process_transaction():
-    """
-    Main B2B transaction processing endpoint.
-
-    Processes a transaction with database updates, including balance changes
-    and audit logging. Supports debit and credit operations.
-    """
+    """Main B2B transaction processing endpoint."""
     start_time = time.time()
     txn_id = str(uuid.uuid4())
 
     try:
-        # Extract and validate request data
         data = request.get_json()
         if not data:
             return jsonify({"error": "No JSON data provided"}), 400
@@ -221,24 +234,17 @@ def process_transaction():
         amount = validated_data['amount']
         transaction_type = validated_data['transaction_type']
 
-        # Log transaction initiation
-        logger.info("B2B_TRANSACTION_INITIATED|TXN_ID:%s|CUSTOMER_ID:%s|"
-                    "AMOUNT:%.2f|TYPE:%s", txn_id, customer_id, amount,
-                    transaction_type)
+        logger.info("B2B_TRANSACTION_INITIATED|TXN_ID:%s|CUSTOMER_ID:%s|AMOUNT:%.2f|TYPE:%s",
+                    txn_id, customer_id, amount, transaction_type)
 
-        # Database operations with context manager
         with db_manager.get_connection() as connection:
             with connection.cursor() as cursor:
-                # Execute database transaction
                 execute_database_transaction(cursor, txn_id, customer_id, amount, transaction_type)
-                # Commit transaction
                 connection.commit()
 
-        processing_time = (time.time() - start_time) * 1000  # ms
+        processing_time = (time.time() - start_time) * 1000
 
-        # Log successful completion
-        logger.info("B2B_TRANSACTION_COMPLETED|TXN_ID:%s|"
-                    "PROCESSING_TIME:%.2fms|STATUS:SUCCESS",
+        logger.info("B2B_TRANSACTION_COMPLETED|TXN_ID:%s|PROCESSING_TIME:%.2fms|STATUS:SUCCESS",
                     txn_id, processing_time)
 
         return jsonify({
@@ -260,7 +266,7 @@ def process_transaction():
             "error": str(e),
             "processing_time_ms": processing_time,
             "timestamp": datetime.now().isoformat()
-        }), 400  # Bad request for validation errors
+        }), 400
 
     except psycopg2.Error as e:
         processing_time = (time.time() - start_time) * 1000
@@ -276,67 +282,54 @@ def process_transaction():
 
 @app.route('/api/v1/stats', methods=['GET'])
 def get_stats():
-    """
-    Get transaction statistics for the last 24 hours.
-
-    Returns aggregated statistics with optional Redis caching.
-    """
-    # Check cache first
+    """Get transaction statistics with cache-first pattern."""
     cache_key = "stats_24h"
-    if REDIS_CLIENT:
-        cached_stats = REDIS_CLIENT.get(cache_key)
-        if cached_stats:
-            return jsonify(json.loads(cached_stats)), 200
+    
+    # Fast cache lookup
+    cached = get_cached(cache_key)
+    if cached:
+        stats = json.loads(cached)
+        stats['from_cache'] = True
+        return jsonify(stats), 200
 
-    connection = None
-    cursor = None
+    # Fallback to database with optimized query
     try:
         with db_manager.get_connection() as connection:
             with connection.cursor() as cursor:
-                # Optimized query with proper aggregation
-                stats_query = """
-                SELECT
-                    COUNT(t.txn_id) as total_transactions,
-                    COALESCE(SUM(t.amount), 0) as total_amount,
-                    COALESCE(AVG(t.amount), 0) as avg_amount,
-                    COUNT(DISTINCT c.customer_id) as unique_customers,
-                    COUNT(ta.audit_id) as audit_records
-                FROM transactions t
-                JOIN customers c ON t.customer_id = c.customer_id
-                LEFT JOIN transaction_audit ta ON t.txn_id = ta.txn_id
-                WHERE t.created_at >= NOW() - INTERVAL '1 day'
-                """
-
-                cursor.execute(stats_query)
+                cursor.execute("""
+                    SELECT 
+                        COUNT(*) as total_transactions,
+                        COALESCE(SUM(amount), 0) as total_amount,
+                        COALESCE(AVG(amount), 0) as avg_amount
+                    FROM transactions 
+                    WHERE created_at >= NOW() - INTERVAL '1 day'
+                """)
                 result = cursor.fetchone()
 
                 stats = {
                     "total_transactions": result[0],
                     "total_amount": float(result[1]),
                     "avg_amount": float(result[2]),
-                    "unique_customers": result[3],
-                    "audit_records": result[4],
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
+                    "from_cache": False
                 }
 
-        # Cache the result
-        if REDIS_CLIENT:
-            REDIS_CLIENT.setex(cache_key, STATS_CACHE_TTL, json.dumps(stats))
-
+        set_cached(cache_key, json.dumps(stats))
         return jsonify(stats), 200
 
     except psycopg2.Error as e:
         logger.error("Stats query failed: %s", e)
-        return jsonify({"error": "Database query failed", "details": str(e)}), 500
+        return jsonify({"error": "Database query failed"}), 500
+
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(e):
-    """Handle unexpected exceptions globally, returning JSON error response."""
+    """Handle unexpected exceptions globally."""
     if isinstance(e, HTTPException):
-        # Let Flask handle HTTP exceptions normally
         return e
     logger.error("Unexpected error: %s", str(e))
     return jsonify({"error": "Internal server error"}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=False)
