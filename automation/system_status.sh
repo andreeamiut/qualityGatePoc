@@ -14,10 +14,10 @@ echo ""
 
 echo "🔍 API ENDPOINT TESTING:"
 # Test main endpoints
-HEALTH_STATUS=$(curl -s http://qualitygatepoc-app-1:5000/health | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
+HEALTH_STATUS=$(curl -s http://app:5000/health | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
 echo "Health Endpoint: $HEALTH_STATUS"
 
-STATS_RESPONSE=$(curl -s http://qualitygatepoc-app-1:5000/api/v1/stats)
+STATS_RESPONSE=$(curl -s http://app:5000/api/v1/stats)
 TOTAL_TXN=$(echo "$STATS_RESPONSE" | grep -o '"total_transactions":[^,}]*' | cut -d':' -f2)
 UNIQUE_CUSTOMERS=$(echo "$STATS_RESPONSE" | grep -o '"unique_customers":[^,}]*' | cut -d':' -f2)
 

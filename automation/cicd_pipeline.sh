@@ -149,7 +149,7 @@ ERROR_TEST=$(curl -s -X POST -H "Content-Type: application/json" \
   http://app:5000/api/v1/transaction | grep -q "error" && echo "PASS" || echo "FAIL")
 
 # Check infrastructure
-MULTI_INSTANCE=$(curl -s http://qualitygatepoc-app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
+MULTI_INSTANCE=$(curl -s http://app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
 
 echo "  • Error Handling: $ERROR_TEST"
 echo "  • Multi-Instance Setup: $MULTI_INSTANCE"
@@ -180,7 +180,7 @@ echo "Simulating production deployment..."
 DEPLOY_HEALTH=$(curl -s http://app:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
 
 # Service mesh validation
-SERVICE_MESH=$(curl -s http://qualitygatepoc-app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
+SERVICE_MESH=$(curl -s http://app-2:5000/health | grep -q "healthy" && echo "PASS" || echo "FAIL")
 
 echo "  • Post-Deploy Health: $DEPLOY_HEALTH"
 echo "  • Service Mesh: $SERVICE_MESH"

@@ -6,7 +6,7 @@ echo ""
 echo "Test 1: Valid Transaction Processing"
 RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
   -d '{"customer_id": "CUST_00000002", "amount": 100.50, "transaction_type": "debit"}' \
-  http://qualitygatepoc-app-1:5000/api/v1/transaction)
+  http://app:5000/api/v1/transaction)
 
 echo "Response: $RESPONSE"
 if echo "$RESPONSE" | grep -q "SUCCESS"; then
@@ -26,7 +26,7 @@ for i in {0..4}; do
     {
         curl -s -X POST -H "Content-Type: application/json" \
           -d "{\"customer_id\": \"${CUSTOMERS[$i]}\", \"amount\": 50.25, \"transaction_type\": \"credit\"}" \
-          http://qualitygatepoc-app-1:5000/api/v1/transaction > /tmp/txn_$i.json
+          http://app:5000/api/v1/transaction > /tmp/txn_$i.json
     } &
 done
 wait
@@ -64,9 +64,9 @@ echo "Success Rate: $SUCCESS_COUNT/5 ($(echo "scale=0; $SUCCESS_COUNT * 20" | bc
 # Test 3: Verify database updates
 echo ""
 echo "Test 3: Database Integrity Check"
-TOTAL_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h qualitygatepoc-oracle-db-1 -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transactions;\"" | xargs)
-COMPLETED_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h qualitygatepoc-oracle-db-1 -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transactions WHERE status='COMPLETED';\"" | xargs)
-AUDIT_RECORDS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h qualitygatepoc-oracle-db-1 -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transaction_audit;\"" | xargs)
+TOTAL_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h db -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transactions;\"" | xargs)
+COMPLETED_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h db -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transactions WHERE status='COMPLETED';\"" | xargs)
+AUDIT_RECORDS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h db -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transaction_audit;\"" | xargs)
 
 echo "Total Transactions: $TOTAL_TRANSACTIONS"
 echo "Completed Transactions: $COMPLETED_TRANSACTIONS" 

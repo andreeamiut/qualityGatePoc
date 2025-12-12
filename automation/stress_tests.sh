@@ -11,7 +11,7 @@ start_time=$(date +%s%N)
 
 for i in {1..100}; do
     {
-        curl -s http://qualitygatepoc-app-1:5000/health > /tmp/burst_$i.out 2>/dev/null
+        curl -s http://app:5000/health > /tmp/burst_$i.out 2>/dev/null
     } &
 done
 wait
@@ -48,7 +48,7 @@ SUSTAINED_TOTAL=200
 start_time=$(date +%s)
 for i in $(seq 1 $SUSTAINED_TOTAL); do
     {
-        if curl -s http://qualitygatepoc-app-1:5000/health | grep -q "healthy" 2>/dev/null; then
+        if curl -s http://app:5000/health | grep -q "healthy" 2>/dev/null; then
             SUSTAINED_SUCCESS=$((SUSTAINED_SUCCESS + 1))
         fi
         sleep 0.15  # 150ms delay between requests
@@ -93,7 +93,7 @@ for i in $(seq 1 $TXN_TOTAL); do
     {
         TXN_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
           -d "{\"customer_id\": \"CUST_$CUSTOMER_NUM\", \"amount\": $AMOUNT, \"transaction_type\": \"PAYMENT\"}" \
-          http://qualitygatepoc-app-1:5000/api/v1/transaction 2>/dev/null)
+          http://app:5000/api/v1/transaction 2>/dev/null)
         
         if echo "$TXN_RESPONSE" | grep -q '"status":"SUCCESS"' 2>/dev/null; then
             TXN_SUCCESS=$((TXN_SUCCESS + 1))
@@ -129,7 +129,7 @@ LARGE_PAYLOAD="${LARGE_PAYLOAD}\"}"
 
 MEMORY_RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
   -d "$LARGE_PAYLOAD" \
-  http://qualitygatepoc-app-1:5000/api/v1/transaction 2>/dev/null)
+  http://app:5000/api/v1/transaction 2>/dev/null)
 
 if echo "$MEMORY_RESPONSE" | grep -q "error\|status" 2>/dev/null; then
     echo "   ✅ Large Payload Handling: SUCCESS (graceful error handling)"
