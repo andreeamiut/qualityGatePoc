@@ -9,7 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RESULTS_DIR="$SCRIPT_DIR/results"
 
 # Database configuration
-DB_HOST="${DB_HOST:-oracle-db}"
+DB_HOST="${DB_HOST:-postgres-db}"
 DB_PORT="${DB_PORT:-5432}"
 DB_NAME="${DB_NAME:-b2b_db}"
 DB_USER="${DB_USER:-b2b_user}"

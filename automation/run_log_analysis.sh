@@ -183,7 +183,7 @@ echo ""
 echo "=== ERROR PATTERN ANALYSIS ==="
 
 # Common error patterns
-database_errors=$(grep -i "database\|connection\|oracle" "$LOG_PATH" 2>/dev/null | grep -i "error\|failed\|exception" | wc -l)
+database_errors=$(grep -i "database\|connection\|postgres" "$LOG_PATH" 2>/dev/null | grep -i "error\|failed\|exception" | wc -l)
 timeout_errors=$(grep -i "timeout\|timed.out" "$LOG_PATH" 2>/dev/null | wc -l)
 auth_errors=$(grep -i "authentication\|authorization\|access.denied" "$LOG_PATH" 2>/dev/null | wc -l)
 validation_errors=$(grep -i "validation\|invalid\|bad.request" "$LOG_PATH" 2>/dev/null | wc -l)
