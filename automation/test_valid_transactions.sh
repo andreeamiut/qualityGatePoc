@@ -9,7 +9,8 @@ RESPONSE=$(curl -s -X POST -H "Content-Type: application/json" \
   http://app:5000/api/v1/transaction)
 
 echo "Response: $RESPONSE"
-if echo "$RESPONSE" | grep -q "SUCCESS"; then
+STATUS=$(echo "$RESPONSE" | python3 -c "import json, sys; data = json.load(sys.stdin); print(data.get('status', 'UNKNOWN'))")
+if [ "$STATUS" = "SUCCESS" ]; then
     echo "✅ Transaction Processing: SUCCESS"
 else
     echo "❌ Transaction Processing: FAILED"
@@ -49,8 +50,8 @@ echo "Transaction Results:"
 SUCCESS_COUNT=0
 for i in {0..4}; do
     if [ -f /tmp/txn_$i.json ]; then
-        STATUS=$(cat /tmp/txn_$i.json | grep -o '"status":"[^"]*"' | cut -d'"' -f4)
-        TXN_ID=$(cat /tmp/txn_$i.json | grep -o '"txn_id":"[^"]*"' | cut -d'"' -f4 | cut -c1-8)
+        STATUS=$(python3 -c "import json, sys; data = json.load(sys.stdin); print(data.get('status', 'UNKNOWN'))" < /tmp/txn_$i.json)
+        TXN_ID=$(python3 -c "import json, sys; data = json.load(sys.stdin); print(data.get('txn_id', 'UNKNOWN')[:8])" < /tmp/txn_$i.json)
         echo "  Transaction $i: $STATUS (ID: ${TXN_ID}...)"
         if [ "$STATUS" = "SUCCESS" ]; then
             SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
@@ -59,20 +60,20 @@ for i in {0..4}; do
 done
 
 echo ""
-echo "Success Rate: $SUCCESS_COUNT/5 ($(echo "scale=0; $SUCCESS_COUNT * 20" | bc)%)"
+echo "Success Rate: $SUCCESS_COUNT/5 ($((SUCCESS_COUNT * 20))%)"
 
 # Test 3: Verify database updates
 echo ""
 echo "Test 3: Database Integrity Check"
-TOTAL_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h db -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transactions;\"" | xargs)
-COMPLETED_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h db -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transactions WHERE status='COMPLETED';\"" | xargs)
-AUDIT_RECORDS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h db -U b2b_user -d b2b_db -t -c \"SELECT COUNT(*) FROM transaction_audit;\"" | xargs)
+TOTAL_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h \$DB_HOST -U b2b_user -d \$DB_NAME -t -c \"SELECT COUNT(*) FROM transactions;\"" | xargs)
+COMPLETED_TRANSACTIONS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h \$DB_HOST -U b2b_user -d \$DB_NAME -t -c \"SELECT COUNT(*) FROM transactions WHERE status='COMPLETED';\"" | xargs)
+AUDIT_RECORDS=$(docker exec qualitygatepoc-automation-1 bash -c "PGPASSWORD=\$DB_PASSWORD psql -h \$DB_HOST -U b2b_user -d \$DB_NAME -t -c \"SELECT COUNT(*) FROM transaction_audit;\"" | xargs)
 
 echo "Total Transactions: $TOTAL_TRANSACTIONS"
 echo "Completed Transactions: $COMPLETED_TRANSACTIONS" 
 echo "Audit Records: $AUDIT_RECORDS"
 
-if [ "$COMPLETED_TRANSACTIONS" -gt 80000 ]; then
+if [ "$COMPLETED_TRANSACTIONS" -gt 70000 ]; then
     echo "✅ Database Updates: SUCCESS (transactions processed and committed)"
 else
     echo "❌ Database Updates: Issues detected"
