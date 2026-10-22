@@ -14,7 +14,7 @@ echo ""
 echo "🔍 INFRASTRUCTURE HEALTH CHECK:"
 
 # Check all services
-SERVICES=("qualitygatepoc-app-1:5000" "qualitygatepoc-oracle-db-1:5432" "qualitygatepoc-redis-1:6379" "qualitygatepoc-prometheus-1:9090")
+SERVICES=("qualitygatepoc-app-1:5000" "qualitygatepoc-postgres-db-1:5432" "qualitygatepoc-redis-1:6379" "qualitygatepoc-prometheus-1:9090")
 SERVICE_NAMES=("Flask API" "PostgreSQL DB" "Redis Cache" "Prometheus")
 
 for i in "${!SERVICES[@]}"; do
@@ -53,9 +53,9 @@ echo ""
 echo "🗄️ DATABASE PERFORMANCE ANALYSIS:"
 
 # Database metrics
-DB_CONNECTIONS=$(docker exec -e PGPASSWORD="${DB_PASSWORD:-}" qualitygatepoc-automation-1 psql -h qualitygatepoc-oracle-db-1 -U b2b_user -d b2b_db -t -c "SELECT count(*) FROM pg_stat_activity WHERE state = 'active';" 2>/dev/null | xargs)
-TOTAL_CUSTOMERS=$(docker exec -e PGPASSWORD="${DB_PASSWORD:-}" qualitygatepoc-automation-1 psql -h qualitygatepoc-oracle-db-1 -U b2b_user -d b2b_db -t -c "SELECT COUNT(*) FROM customers;" 2>/dev/null | xargs)
-TOTAL_TRANSACTIONS=$(docker exec -e PGPASSWORD="${DB_PASSWORD:-}" qualitygatepoc-automation-1 psql -h qualitygatepoc-oracle-db-1 -U b2b_user -d b2b_db -t -c "SELECT COUNT(*) FROM transactions;" 2>/dev/null | xargs)
+DB_CONNECTIONS=$(docker exec -e PGPASSWORD="${DB_PASSWORD:-}" qualitygatepoc-automation-1 psql -h qualitygatepoc-postgres-db-1 -U b2b_user -d b2b_db -t -c "SELECT count(*) FROM pg_stat_activity WHERE state = 'active';" 2>/dev/null | xargs)
+TOTAL_CUSTOMERS=$(docker exec -e PGPASSWORD="${DB_PASSWORD:-}" qualitygatepoc-automation-1 psql -h qualitygatepoc-postgres-db-1 -U b2b_user -d b2b_db -t -c "SELECT COUNT(*) FROM customers;" 2>/dev/null | xargs)
+TOTAL_TRANSACTIONS=$(docker exec -e PGPASSWORD="${DB_PASSWORD:-}" qualitygatepoc-automation-1 psql -h qualitygatepoc-postgres-db-1 -U b2b_user -d b2b_db -t -c "SELECT COUNT(*) FROM transactions;" 2>/dev/null | xargs)
 
 echo "Active DB Connections: $DB_CONNECTIONS"
 echo "Total Customers: $TOTAL_CUSTOMERS"
