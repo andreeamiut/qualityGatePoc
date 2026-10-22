@@ -77,6 +77,8 @@ secrets/
 
 # Test results
 test-results/
+automation/results/
+performance/results/
 coverage/
 .coverage
 .pytest_cache/
