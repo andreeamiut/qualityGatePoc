@@ -10,7 +10,7 @@ pytest-cov>=4.0.0
 requests>=2.33.0
 
 # Security and code quality
-bandit>=1.7.0
+bandit>=1.9.4
 safety>=2.3.0
 
 # Database migrations and utilities
