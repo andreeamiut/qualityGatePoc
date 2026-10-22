@@ -45,7 +45,7 @@ if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
     echo "Checking database connectivity..."
     
     # Test database responsiveness
-    DB_CONTAINER="qualitygatepoc-oracle-db-1"
+    DB_CONTAINER="qualitygatepoc-postgres-db-1"
     if docker ps --format "table {{.Names}}" | grep -q "$DB_CONTAINER"; then
         echo "Database Status: RUNNING"
         
@@ -62,14 +62,14 @@ if docker ps --format "table {{.Names}}" | grep -q "$CONTAINER_NAME"; then
             echo "⚠️  DATABASE CPU BOTTLENECK (${DB_CPU}%)"
             echo "💡 RECOMMENDATIONS:"
             echo "   1. Add database connection pooling"
-            echo "   2. Optimize SQL queries with EXPLAIN PLAN"
+            echo "   2. Optimize SQL queries with EXPLAIN ANALYZE"
             echo "   3. Add database indexes on frequently queried columns"
-            echo "   4. Increase database shared_pool_size"
+            echo "   4. Tune PostgreSQL shared_buffers / work_mem"
         fi
         
     else
         echo "❌ Database container not found or not running"
-        echo "💡 RECOMMENDATION: Ensure Oracle database is running and accessible"
+        echo "💡 RECOMMENDATION: Ensure the PostgreSQL database is running and accessible"
     fi
     
 else
@@ -118,7 +118,7 @@ echo "2. DATABASE LAYER:"
 echo "   - Add composite indexes on (customer_id, created_at)"
 echo "   - Implement database query result caching"
 echo "   - Use prepared statements"
-echo "   - Configure Oracle SGA parameters for better performance"
+echo "   - Tune PostgreSQL memory settings (shared_buffers, work_mem)"
 echo ""
 echo "3. INFRASTRUCTURE LAYER:"
 echo "   - Increase container CPU limits if CPU > 80%"
