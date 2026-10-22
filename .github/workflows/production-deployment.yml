@@ -107,7 +107,7 @@ jobs:
           type=sha,prefix={{branch}}-
 
     - name: 🏗️ Build & Push Application Image
-      uses: docker/build-push-action@v5
+      uses: docker/build-push-action@v7
       with:
         context: .
         file: ./Dockerfile
