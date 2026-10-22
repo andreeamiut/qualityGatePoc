@@ -2,7 +2,7 @@
 
 # Start core services (app + database)
 start-core:
-	docker-compose up -d app oracle-db
+	docker-compose up -d app postgres-db redis
 
 # Start with performance testing capability
 start-performance:
@@ -34,7 +34,7 @@ logs-app:
 	docker-compose logs -f app
 
 logs-db:
-	docker-compose logs -f oracle-db
+	docker-compose logs -f postgres-db
 
 logs-all:
 	docker-compose logs -f
@@ -54,11 +54,11 @@ performance-test:
 run-automation:
 	docker-compose --profile automation exec automation-agent /opt/automation/run_full_suite.sh
 
-# Initialize database with test data
+# Re-initialize database with test data (it is seeded automatically on first start)
 init-db:
 	@echo "Initializing database with test data..."
-	docker-compose exec oracle-db sqlplus b2b_user/b2b_password@//localhost:1521/ORCLPDB1 @/docker-entrypoint-initdb.d/01_schema.sql
-	docker-compose exec oracle-db sqlplus b2b_user/b2b_password@//localhost:1521/ORCLPDB1 @/docker-entrypoint-initdb.d/02_data.sql
+	docker-compose exec -T postgres-db psql -U b2b_user -d b2b_db -f /docker-entrypoint-initdb.d/01_schema.sql
+	docker-compose exec -T postgres-db psql -U b2b_user -d b2b_db -f /docker-entrypoint-initdb.d/02_data.sql
 
 # Monitoring URLs
 show-urls:
@@ -68,7 +68,7 @@ show-urls:
 	@echo "Application Stats: http://localhost:5000/api/v1/stats"
 	@echo "Jenkins: http://localhost:8080"
 	@echo "Prometheus: http://localhost:9090"
-	@echo "Grafana: http://localhost:3000 (admin/admin123)"
-	@echo "Oracle DB: localhost:1521/ORCLPDB1"
+	@echo "Grafana: http://localhost:3000"
+	@echo "PostgreSQL: localhost:5432/b2b_db"
 
 .PHONY: start-core start-performance start-cicd start-monitoring start-all stop clean logs-app logs-db logs-all health performance-test run-automation init-db show-urls
