@@ -33,7 +33,7 @@ Write-Host "📁 Working Directory: $WorkDir" -ForegroundColor Cyan
 # Deploy core services
 Write-Host ""
 Write-Host "🏗️ Deploying Core Services (App + Database)..." -ForegroundColor Yellow
-docker-compose up -d app oracle-db
+docker-compose up -d app postgres-db redis
 
 # Wait for services to start
 Write-Host ""
@@ -68,17 +68,7 @@ if (-not $appHealthy) {
     exit 1
 }
 
-# Initialize database (attempt)
-Write-Host ""
-Write-Host "🗄️ Attempting database initialization..." -ForegroundColor Yellow
-try {
-    # This may fail if Oracle is still starting up, but we'll continue
-    docker-compose exec -T oracle-db sqlplus -s b2b_user/b2b_password@//localhost:1521/ORCLPDB1 @/docker-entrypoint-initdb.d/01_schema.sql 2>$null
-    docker-compose exec -T oracle-db sqlplus -s b2b_user/b2b_password@//localhost:1521/ORCLPDB1 @/docker-entrypoint-initdb.d/02_data.sql 2>$null
-    Write-Host "✅ Database initialization completed" -ForegroundColor Green
-} catch {
-    Write-Host "⚠️ Database initialization may need manual setup (Oracle still starting)" -ForegroundColor Yellow
-}
+# Database is seeded automatically by PostgreSQL on first start (database/postgres/*.sql)
 
 # Test basic functionality
 Write-Host ""
@@ -121,7 +111,7 @@ Write-Host "🌐 Service URLs:" -ForegroundColor Cyan
 Write-Host "   Application API:    http://localhost:5000" -ForegroundColor White
 Write-Host "   Health Check:       http://localhost:5000/health" -ForegroundColor White
 Write-Host "   Statistics:         http://localhost:5000/api/v1/stats" -ForegroundColor White
-Write-Host "   Oracle Database:    localhost:1521/ORCLPDB1" -ForegroundColor White
+Write-Host "   PostgreSQL:         localhost:5432/b2b_db" -ForegroundColor White
 
 Write-Host ""
 Write-Host "🎯 Next Steps:" -ForegroundColor Cyan
@@ -136,13 +126,11 @@ Write-Host ""
 Write-Host "   3. Access monitoring (optional):" -ForegroundColor White
 Write-Host "      docker-compose --profile monitoring up -d" -ForegroundColor Gray
 Write-Host "      Prometheus: http://localhost:9090" -ForegroundColor Gray
-Write-Host "      Grafana: http://localhost:3000 (admin/admin123)" -ForegroundColor Gray
+Write-Host "      Grafana: http://localhost:3000" -ForegroundColor Gray
 
 Write-Host ""
-Write-Host "📋 Manual Database Setup (if needed):" -ForegroundColor Cyan
-Write-Host "   docker-compose exec oracle-db sqlplus b2b_user/b2b_password@//localhost:1521/ORCLPDB1" -ForegroundColor Gray
-Write-Host "   SQL> @/docker-entrypoint-initdb.d/01_schema.sql" -ForegroundColor Gray
-Write-Host "   SQL> @/docker-entrypoint-initdb.d/02_data.sql" -ForegroundColor Gray
+Write-Host "📋 Database shell (if needed):" -ForegroundColor Cyan
+Write-Host "   docker-compose exec postgres-db psql -U b2b_user -d b2b_db" -ForegroundColor Gray
 
 Write-Host ""
 Write-Host "✨ B2B QA Environment is ready for testing!" -ForegroundColor Green
