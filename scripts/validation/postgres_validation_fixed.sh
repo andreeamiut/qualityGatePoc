@@ -1,6 +1,6 @@
 #!/bin/bash
 export PGPASSWORD=b2b_password
-DB_HOST="qualitygatepoc-oracle-db-1"
+DB_HOST="qualitygatepoc-postgres-db-1"
 DB_USER="b2b_user"
 DB_NAME="b2b_db"
 
