@@ -35,7 +35,7 @@ jobs:
       
     steps:
     - name: 📥 Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: 🔍 Quality Gate Check
       id: validation
@@ -82,7 +82,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: 🐳 Setup Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -198,7 +198,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: 📥 Download Artifacts
       uses: actions/download-artifact@v4
@@ -249,7 +249,7 @@ jobs:
     
     steps:
     - name: 📥 Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: 📥 Download Artifacts
       uses: actions/download-artifact@v4
