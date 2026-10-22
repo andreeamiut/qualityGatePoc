@@ -72,7 +72,7 @@ pipeline {
                         }
                         sh '''
                             echo "Database initialization scripts prepared"
-                            ls -la database/init/
+                            ls -la database/postgres/
                         '''
                     }
                 }
