@@ -15,4 +15,4 @@ safety>=2.3.0
 
 # Database migrations and utilities
 sqlalchemy>=1.4.0,<2.0.0
-alembic>=1.10.0
+alembic>=1.19.2
