@@ -1,6 +1,6 @@
 # Full-Spectrum QA Environment - Python Dependencies
 # This file is used by GitHub Actions workflows for dependency management
-alembic==1.12.1
+alembic==1.19.2
 bandit==1.9.4
 blinker==1.9.0
 certifi==2026.10.19
