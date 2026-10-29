@@ -89,7 +89,7 @@ jobs:
         echo "score=$QUALITY_SCORE" >> $GITHUB_OUTPUT
 
     - name: 📤 Upload Quality Reports
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: code-quality-reports
         path: |
@@ -179,7 +179,7 @@ jobs:
         cat infrastructure_report.txt
 
     - name: 📤 Upload Infrastructure Report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: infrastructure-report
         path: infrastructure_report.txt
@@ -279,7 +279,7 @@ jobs:
         curl -s http://localhost:5000/api/v1/stats >> $TEST_REPORT
 
     - name: 📤 Upload Test Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ matrix.test-type }}-test-results
         path: ${{ matrix.test-type }}_test_report.txt
@@ -349,7 +349,7 @@ jobs:
         fi
 
     - name: 📤 Upload Pipeline Results
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: cicd-pipeline-results
         path: cicd_pipeline_results.txt
@@ -417,7 +417,7 @@ jobs:
         cat $QUALITY_REPORT
 
     - name: 📤 Upload Final Quality Report
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: final-quality-report
         path: final_quality_report.md
@@ -485,7 +485,7 @@ jobs:
         fi
 
     - name: 📤 Upload Pipeline Badge
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: pipeline-badge
         path: pipeline_badge.md
